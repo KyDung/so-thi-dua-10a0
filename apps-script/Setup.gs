@@ -1,4 +1,4 @@
-/**
+`/**
  * Setup.gs — Khởi tạo Google Sheet làm database.
  * Chạy MỘT LẦN: mở menu "⚙️ Thi đua" → "Khởi tạo database".
  */
@@ -136,6 +136,7 @@ function onOpen() {
     .addItem('Sinh mã học sinh', 'sinhMaHS')
     .addItem('Tính lại số liệu tất cả các tháng', 'tinhLaiTatCa')
     .addItem('🗑 Xoá hết trang tuần', 'xoaHetTrangTuan')
+    .addItem('🧹 Dọn lịch sử sửa đổi', 'donLichSu')
     .addSeparator()
     .addItem('👤 Áp dụng tài khoản (sau khi thêm/đổi mật khẩu)', 'apDungTaiKhoan')
     .addItem('👤 Xem danh sách tài khoản', 'xemTaiKhoan')
@@ -426,6 +427,50 @@ function xoaHetTrangTuan() {
   ui.alert('Đã xoá ' + n + ' trang tuần. Giờ vào web tạo trang tuần đầu tiên.');
 }
 
+/**
+ * Dọn các dòng lịch sử trong NhatKy.
+ *
+ * Mỗi lần cán bộ lớp bấm Lưu, bản ghi cũ không bị xoá mà chuyển thành DA_THAY
+ * (hoặc DA_XOA) để truy vết được. Dùng lâu thì các dòng này tích tụ, sheet phình
+ * to và Apps Script chạy chậm dần. Hàm này xoá hẳn chúng đi.
+ *
+ * KHÔNG đụng vào dòng HOAT_DONG - tức là dữ liệu đang hiển thị trên web.
+ */
+function donLichSu() {
+  const ui = SpreadsheetApp.getUi();
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEETS.NHATKY);
+  const head = SCHEMA.NhatKy;
+  const n = sh.getLastRow() - 1;
+  if (n <= 0) { ui.alert('Sheet NhatKy đang trống.'); return; }
+
+  const iTT = head.indexOf('TrangThai');
+  const vals = sh.getRange(2, 1, n, head.length).getValues();
+  const giuLai = vals.filter(function (r) {
+    return r[iTT] === 'HOAT_DONG' && r[head.indexOf('Id')];
+  });
+  const soXoa = n - giuLai.length;
+
+  if (!soXoa) {
+    ui.alert('Không có gì để dọn', 'Tất cả ' + giuLai.length + ' dòng đều đang có hiệu lực.',
+      ui.ButtonSet.OK);
+    return;
+  }
+
+  const tl = ui.alert('Dọn lịch sử sửa đổi',
+    'Xoá hẳn ' + soXoa + ' dòng lịch sử (DA_THAY / DA_XOA)?\n\n' +
+    'Giữ lại ' + giuLai.length + ' dòng đang có hiệu lực - dữ liệu trên web không đổi.\n\n' +
+    'Sau khi dọn sẽ không tra được ai đã sửa gì trước đây nữa (sheet Log vẫn còn).',
+    ui.ButtonSet.YES_NO);
+  if (tl !== ui.Button.YES) return;
+
+  sh.getRange(2, 1, n, head.length).clearContent();
+  if (giuLai.length) {
+    sh.getRange(2, 1, giuLai.length, head.length).setValues(giuLai);
+  }
+  ghiLog('GVCN', 'DON_LICH_SU', 'Xoá ' + soXoa + ' dòng, giữ ' + giuLai.length);
+  ui.alert('Đã dọn ' + soXoa + ' dòng lịch sử. Còn ' + giuLai.length + ' dòng đang dùng.');
+}
+
 function hashMK(mk) {
   const b = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, mk + '|thidua10A0', Utilities.Charset.UTF_8);
   return b.map(function (x) { return ('0' + (x & 0xff).toString(16)).slice(-2); }).join('');
@@ -434,3 +479,4 @@ function hashMK(mk) {
 function fmt(d) {
   return Utilities.formatDate(d, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
 }
+`;

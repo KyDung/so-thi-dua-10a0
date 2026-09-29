@@ -201,4 +201,6 @@ Mọi thay đổi **có hiệu lực ngay**, không cần deploy lại, không c
 | Số liệu trên web không khớp Sheet | Menu **⚙️ Thi đua → Tính lại số liệu tất cả các tháng** |
 | Lỡ chốt tháng nhầm | Sheet `XepLoaiThang`, đổi cột `DaChot` của tháng đó về `FALSE` |
 | Muốn biết ai đã nhập gì | Sheet `Log` — ghi lại mọi thao tác kèm thời gian |
+| Sheet `NhatKy` có nhiều dòng `DA_THAY` lạ | Bình thường — đó là bản cũ mỗi lần sửa sổ, web không đọc. Nhiều quá thì bấm **⚙️ Thi đua → 🧹 Dọn lịch sử sửa đổi** |
+| Web chạy chậm dần sau vài tháng | Bấm **🧹 Dọn lịch sử sửa đổi** (nên làm mỗi học kỳ một lần) |
 | Sửa code xong web không đổi | Phải **Triển khai → Quản lý bản triển khai → sửa → Phiên bản mới** |
