@@ -442,7 +442,6 @@ async function mhChiTiet() {
     const p = v[0] === 'tuan' ? '&tuan=' + encodeURIComponent(v[1]) : '&thang=' + v[1];
     location.hash = '#/chi-tiet?ma=' + encodeURIComponent(ma) + p;
   };
-  q('#iLocThang').onchange = function () { location.hash = '#/chi-tiet?ma=' + encodeURIComponent(ma) + '&thang=' + this.value; };
 }
 
 // ---------- Xếp hạng thi đua ----------

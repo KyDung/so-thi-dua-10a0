@@ -91,5 +91,22 @@ if (napDuoc) {
   kt('mọi action trong xuLy() đều có hàm', thieu.length === 0, 'thiếu: ' + thieu.join(', '));
 }
 
+// ---------- 3. Web không gọi tới phần tử không tồn tại ----------
+// Lỗi thật đã gặp: đổi tên ô lọc từ #iLocThang thành #iLoc nhưng sót một dòng
+// q('#iLocThang').onchange -> "Cannot set properties of null" khi mở tab chi tiết.
+console.log('\n=== Web có gọi tới id nào không tồn tại không? ===');
+const appJs = fs.readFileSync(path.join(WEB, 'app.js'), 'utf8');
+const indexHtml = fs.readFileSync(path.join(GOC, 'docs', 'index.html'), 'utf8');
+
+const coId = new Set(
+  [...(appJs + indexHtml).matchAll(/id=["']([A-Za-z0-9_-]+)["']/g)].map(m => m[1]));
+const goiId = [...new Set(
+  [...appJs.matchAll(/q\(['"]#([A-Za-z0-9_-]+)['"]\)/g)].map(m => m[1]))];
+const thieuId = goiId.filter(x => !coId.has(x));
+
+kt('mọi q("#id") đều có id tương ứng', thieuId.length === 0,
+   'không tìm thấy: ' + thieuId.join(', '));
+kt('có id để gọi', goiId.length > 0, goiId.length + ' id được gọi');
+
 console.log('\n' + pass + ' đạt, ' + fail + ' lỗi');
 process.exit(fail ? 1 : 0);
