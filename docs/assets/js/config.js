@@ -7,7 +7,7 @@
  */
 
 const CONFIG = {
-  API_URL: 'PASTE_URL_APPS_SCRIPT_VAO_DAY',
+  API_URL: 'https://script.google.com/macros/s/AKfycbyGwgjPOPgBLCilYdWD_fX_1VJ_R3G7jpw8uSJCcQjn3ZVtEwfhxMH7T8au89ChN-gunw/exec',
 
   // Hiển thị tạm khi chưa kết nối được máy chủ
   TEN_TRUONG: 'THPT Xuân Đỉnh',
