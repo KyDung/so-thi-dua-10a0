@@ -380,132 +380,168 @@ async function mhThiDua() {
   });
 }
 
-// ---------- Chấm điểm (cán bộ lớp) ----------
+// ---------- Ghi sổ (cán bộ lớp) ----------
+// Mục đích: chép lại y như sổ giấy của trường. Gõ ngày, tên, nội dung, điểm.
+// Không ép chọn theo danh mục — danh mục chỉ là gợi ý gõ nhanh.
 async function mhChamDiem() {
   if (!vaiTro()) { location.hash = '#/dang-nhap'; return; }
   loading();
-  if (!DANHMUC) DANHMUC = await API.danhMuc();
-  const hs = await API.dsHocSinhCuaToi();
 
-  const loiHay = DANHMUC.loi.slice(0, 8);
-  const loiKhac = DANHMUC.loi.slice(8);
+  const thang = Number(thamSo('thang')) || thangMacDinh();
+  const [hs, daGhi] = await Promise.all([
+    API.dsHocSinhCuaToi(),
+    API.nhatKyThang(thang)
+  ]);
+  if (!DANHMUC) { try { DANHMUC = await API.danhMuc(); } catch (e) { DANHMUC = { loi: [], cong: [] }; } }
+
+  const goiY = DANHMUC.loi.map(function (l) { return l.TenLoi; })
+    .concat(DANHMUC.cong.map(function (c) { return c.TenCong; }));
 
   el.innerHTML = `
     <div class="card">
-      <h2>Chấm nề nếp</h2>
-      <p class="hint">Chọn ngày, bấm vào các mục vi phạm / điểm cộng của từng bạn, xong bấm <strong>Lưu tất cả</strong>.
-        Bấm nhiều lần cùng 1 mục = ghi nhiều lượt (×2, ×3); bấm lần thứ 4 để bỏ chọn.</p>
-      <div class="row">
-        <div style="flex:1;min-width:160px"><label class="f">Ngày</label>
-          <input type="date" id="iNgay" value="${hnay()}"></div>
-        <div style="flex:2;min-width:200px"><label class="f">Mục khác (chọn rồi bấm nút ＋ của học sinh)</label>
-          <select id="iLoiKhac"><option value="">— chọn thêm mục —</option>
-            ${loiKhac.map(function (l) {
-              return '<option value="LOI|' + esc(l.MaLoi) + '">' + esc(l.TenLoi) + ' (' + esc(l.DiemTru) + 'đ)</option>';
-            }).join('')}
-            ${DANHMUC.cong.map(function (c) {
-              return '<option value="CONG|' + esc(c.MaCong) + '">➕ ' + esc(c.TenCong) + ' (+' + esc(c.DiemCong) + 'đ)</option>';
-            }).join('')}
-          </select></div>
-      </div>
-      <div class="row" style="margin-top:12px">
-        <button class="primary" id="btnLuu" disabled>Lưu tất cả</button>
-        <button id="btnXoaChon">Bỏ chọn hết</button>
-        <span id="dem" style="color:var(--ink-mute);font-size:13.5px"></span>
+      <div class="row" style="justify-content:space-between;align-items:flex-end">
+        <div>
+          <h2>Ghi sổ tháng ${esc(thang)}</h2>
+          <p class="hint" style="margin:0">Chép lại từ sổ theo dõi của lớp. Gõ xong một dòng thì bấm
+            <strong>Thêm dòng</strong> (hoặc Enter), làm hết rồi bấm <strong>Lưu tất cả</strong>.</p>
+        </div>
+        <div>${oChonThang(thang)}</div>
       </div>
     </div>
-    <div id="dsCham">${hs.map(function (h) {
-      return `<div class="cham-hs" data-ma="${esc(h.maHS)}">
-        <div class="ten"><span>${esc(h.hoTen)}</span>
-          <span style="color:var(--ink-mute);font-size:13px;font-weight:400">${esc(h.to || '')}</span></div>
-        <div class="chip-row">
-          ${loiHay.map(function (l) {
-            return `<span class="chip" data-loai="LOI" data-ma="${esc(l.MaLoi)}"
-              title="${esc(l.TenLoi)} (${esc(l.DiemTru)}đ)">${esc(rutGon(l.TenLoi))}<span class="n"></span></span>`;
-          }).join('')}
-          <span class="chip them" title="Thêm mục đã chọn ở ô trên">＋</span>
+
+    <div class="card">
+      <form id="fThem" class="grid" style="grid-template-columns:1fr;gap:10px">
+        <div class="row" style="gap:10px">
+          <div style="flex:2;min-width:180px">
+            <label class="f">Học sinh</label>
+            <select id="iHS">${hs.map(function (h) {
+              return '<option value="' + esc(h.maHS) + '">' + esc(h.hoTen) + '</option>';
+            }).join('')}</select>
+          </div>
+          <div style="flex:1;min-width:140px">
+            <label class="f">Ngày</label>
+            <input type="date" id="iNgay" value="${hnay()}" required>
+          </div>
         </div>
-        <div class="chip-row them-row" style="margin-top:6px"></div>
-      </div>`;
-    }).join('')}</div>`;
+        <div class="row" style="gap:10px">
+          <div style="flex:3;min-width:220px">
+            <label class="f">Nội dung (chép y như trong sổ)</label>
+            <input id="iNoiDung" list="dsGoiY" placeholder="ví dụ: Đi học muộn" required>
+            <datalist id="dsGoiY">${goiY.map(function (t) {
+              return '<option value="' + esc(t) + '">';
+            }).join('')}</datalist>
+          </div>
+          <div style="flex:1;min-width:110px">
+            <label class="f">Điểm <span style="font-weight:400">(để trống nếu sổ không ghi)</span></label>
+            <input id="iDiem" type="number" step="1" placeholder="-1">
+          </div>
+        </div>
+        <div class="row">
+          <button class="primary" type="submit">Thêm dòng</button>
+          <span class="hint" style="margin:0">Điểm trừ gõ số âm (−1, −2). Điểm cộng gõ số dương (1, 3).</span>
+        </div>
+      </form>
+    </div>
 
-  const chon = {};   // "maHS|loai|ma" -> số lượt
+    <div class="card" id="boxChoLuu" style="display:none">
+      <h2>Chờ lưu <span id="demCho" style="color:var(--ink-mute);font-weight:400"></span></h2>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Ngày</th><th>Học sinh</th><th>Nội dung</th>
+          <th style="text-align:right">Điểm</th><th></th></tr></thead>
+        <tbody id="tbCho"></tbody>
+      </table></div>
+      <div class="row" style="margin-top:12px">
+        <button class="primary" id="btnLuu">Lưu tất cả</button>
+        <button id="btnXoaHet">Xoá hết</button>
+      </div>
+    </div>
 
-  function veLai() {
-    let tong = 0;
-    Object.keys(chon).forEach(function (k) { tong += chon[k]; });
-    q('#dem').textContent = tong ? tong + ' lượt đang chờ lưu' : '';
-    q('#btnLuu').disabled = tong === 0;
+    <div class="card">
+      <h2>Đã ghi trong tháng ${esc(thang)} <span style="color:var(--ink-mute);font-weight:400">(${daGhi.length} dòng)</span></h2>
+      ${daGhi.length ? `<div class="tbl-wrap"><table>
+        <thead><tr><th>Ngày</th><th>Học sinh</th><th>Nội dung</th>
+          <th style="text-align:right">Điểm</th><th></th></tr></thead>
+        <tbody>${daGhi.map(function (r) {
+          return `<tr>
+            <td style="white-space:nowrap">${esc(r.ngay)}</td>
+            <td>${esc(r.hoTen)}</td>
+            <td>${esc(r.noiDung)}</td>
+            <td style="text-align:right">${diemHTML(r.diem)}</td>
+            <td><button class="sm btnXoa" data-id="${esc(r.id)}">Xoá</button></td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table></div>` : '<div class="empty">Chưa ghi dòng nào trong tháng này.</div>'}
+    </div>`;
+
+  q('#iThang').onchange = function () { location.hash = '#/cham-diem?thang=' + this.value; };
+
+  const cho = [];   // các dòng đang chờ lưu
+
+  function veLaiCho() {
+    const box = q('#boxChoLuu');
+    box.style.display = cho.length ? '' : 'none';
+    q('#demCho').textContent = cho.length ? '(' + cho.length + ' dòng)' : '';
+    q('#tbCho').innerHTML = cho.map(function (r, i) {
+      return `<tr>
+        <td style="white-space:nowrap">${esc(r.ngay)}</td>
+        <td>${esc(r.hoTen)}</td>
+        <td>${esc(r.noiDung)}</td>
+        <td style="text-align:right">${diemHTML(r.diem)}</td>
+        <td><button class="sm btnBo" data-i="${i}">Bỏ</button></td>
+      </tr>`;
+    }).join('');
+    qa('.btnBo').forEach(function (b) {
+      b.onclick = function () { cho.splice(Number(b.dataset.i), 1); veLaiCho(); };
+    });
   }
 
-  // Gắn vào #dsCham (tạo lại mỗi lần vẽ màn hình) chứ không gắn vào el,
-  // vì el tồn tại suốt phiên -> listener sẽ chồng lên nhau mỗi lần quay lại màn này.
-  q('#dsCham').addEventListener('click', function (ev) {
-    const chip = ev.target.closest('.chip');
-    if (!chip) return;
-    const box = chip.closest('.cham-hs');
-    const maHS = box.dataset.ma;
-
-    if (chip.classList.contains('them')) {
-      const v = q('#iLoiKhac').value;
-      if (!v) { alert('Chọn một mục ở ô "Mục khác" trước đã.'); return; }
-      const parts = v.split('|');
-      const dm = parts[0] === 'CONG'
-        ? DANHMUC.cong.filter(function (x) { return x.MaCong === parts[1]; })[0]
-        : DANHMUC.loi.filter(function (x) { return x.MaLoi === parts[1]; })[0];
-      const row = box.querySelector('.them-row');
-      let ex = row.querySelector('[data-ma="' + parts[1] + '"]');
-      if (!ex) {
-        ex = document.createElement('span');
-        ex.className = 'chip' + (parts[0] === 'CONG' ? ' cong' : '');
-        ex.dataset.loai = parts[0]; ex.dataset.ma = parts[1];
-        ex.innerHTML = esc(rutGon(dm.TenLoi || dm.TenCong)) + '<span class="n"></span>';
-        row.appendChild(ex);
-      }
-      ex.click();
-      return;
-    }
-
-    const k = maHS + '|' + chip.dataset.loai + '|' + chip.dataset.ma;
-    chon[k] = (chon[k] || 0) + 1;
-    if (chon[k] > 3) delete chon[k];          // bấm lần thứ 4 thì bỏ chọn
-    chip.classList.toggle('sel', !!chon[k]);
-    chip.querySelector('.n').textContent = chon[k] > 1 ? '×' + chon[k] : '';
-    veLai();
-  });
-
-  q('#btnXoaChon').onclick = function () {
-    Object.keys(chon).forEach(function (k) { delete chon[k]; });
-    qa('.chip.sel').forEach(function (c) { c.classList.remove('sel'); c.querySelector('.n').textContent = ''; });
-    veLai();
+  q('#fThem').onsubmit = function (ev) {
+    ev.preventDefault();
+    const sel = q('#iHS');
+    cho.push({
+      maHS: sel.value,
+      hoTen: sel.options[sel.selectedIndex].text,
+      ngay: q('#iNgay').value,
+      noiDung: q('#iNoiDung').value.trim(),
+      diem: q('#iDiem').value === '' ? 0 : Number(q('#iDiem').value)
+    });
+    q('#iNoiDung').value = '';
+    q('#iDiem').value = '';
+    q('#iNoiDung').focus();
+    veLaiCho();
   };
 
+  q('#btnXoaHet').onclick = function () { cho.length = 0; veLaiCho(); };
+
   q('#btnLuu').onclick = async function () {
-    const ngay = q('#iNgay').value;
-    if (!ngay) { alert('Chọn ngày đã.'); return; }
-    const items = [];
-    Object.keys(chon).forEach(function (k) {
-      const p = k.split('|');
-      for (let i = 0; i < chon[k]; i++) items.push({ maHS: p[0], ngay: ngay, loai: p[1], ma: p[2] });
-    });
     this.disabled = true; this.textContent = 'Đang lưu…';
     try {
-      const r = await API.ghiNhatKy(items);
+      const r = await API.ghiNhatKy(cho.map(function (x) {
+        return { maHS: x.maHS, ngay: x.ngay, noiDung: x.noiDung, diem: x.diem };
+      }));
       el.insertAdjacentHTML('afterbegin',
-        '<div class="msg ok">Đã lưu ' + r.soBanGhi + ' lượt cho ngày ' + esc(ngay) + '.</div>');
-      q('#btnXoaChon').click();
+        '<div class="msg ok">Đã lưu ' + r.soBanGhi + ' dòng.</div>');
       window.scrollTo(0, 0);
+      setTimeout(function () { mhChamDiem().catch(loi); }, 700);
     } catch (e) {
       el.insertAdjacentHTML('afterbegin', '<div class="msg err">' + esc(e.message) + '</div>');
       window.scrollTo(0, 0);
+      this.disabled = false; this.textContent = 'Lưu tất cả';
     }
-    this.disabled = false; this.textContent = 'Lưu tất cả';
   };
-}
 
-function rutGon(s) {
-  s = String(s);
-  return s.length > 26 ? s.slice(0, 24) + '…' : s;
+  qa('.btnXoa').forEach(function (b) {
+    b.onclick = async function () {
+      if (!confirm('Xoá dòng này?')) return;
+      b.disabled = true;
+      try {
+        await API.xoaNhatKy(b.dataset.id);
+        mhChamDiem().catch(loi);
+      } catch (e) {
+        alert(e.message); b.disabled = false;
+      }
+    };
+  });
 }
 
 // ---------- Quản trị (GVCN) ----------

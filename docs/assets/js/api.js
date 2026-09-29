@@ -116,7 +116,7 @@ const API = (function () {
     // ---- Cần đăng nhập: nhập liệu (POST) ----
     dangNhap: function (u, p) { return post({ action: 'dangNhap', tenDangNhap: u, matKhau: p }); },
     dsHocSinhCuaToi: function () { return post({ action: 'dsHocSinh' }); },
-    nhatKyTuan: function (maTuan) { return post({ action: 'nhatKyTuan', maTuan: maTuan }); },
+    nhatKyThang: function (thang) { return post({ action: 'nhatKyThang', thang: thang }); },
     ghiNhatKy: function (items) { return post({ action: 'ghiNhatKy', items: items }); },
     xoaNhatKy: function (id) { return post({ action: 'xoaNhatKy', id: id }); },
     luuXepLoai: function (items) { return post({ action: 'luuXepLoai', items: items }); },

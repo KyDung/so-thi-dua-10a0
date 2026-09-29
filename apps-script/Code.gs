@@ -51,7 +51,7 @@ function xuLy(action, p, phien) {
 
     // ---------- Cần đăng nhập: nhập liệu ----------
     case 'dangNhap':      return apiDangNhap(p.tenDangNhap, p.matKhau);
-    case 'nhatKyTuan':    return apiNhatKyTuan(canQuyen(phien, ['TO_TRUONG', 'LOP_TRUONG', 'GVCN']), p.maTuan);
+    case 'nhatKyThang':   return apiNhatKyThang(canQuyen(phien, ['TO_TRUONG', 'LOP_TRUONG', 'GVCN']), p.thang);
     case 'ghiNhatKy':     return apiGhiNhatKy(canQuyen(phien, ['TO_TRUONG', 'LOP_TRUONG', 'GVCN']), p.items);
     case 'xoaNhatKy':     return apiXoaNhatKy(canQuyen(phien, ['TO_TRUONG', 'LOP_TRUONG', 'GVCN']), p.id);
     case 'luuXepLoai':    return apiLuuXepLoai(canQuyen(phien, ['LOP_TRUONG', 'GVCN']), p.items);
@@ -132,8 +132,8 @@ function apiChiTietHS(maHS) {
       const dm = r.Loai === 'CONG' ? cong[r.Ma] : loi[r.Ma];
       return {
         ngay: fmtNgay(r.Ngay), thang: r.Thang, maTuan: r.MaTuan, loai: r.Loai,
-        ten: dm ? (dm.TenLoi || dm.TenCong) : r.Ma,
-        nhom: dm ? dm.Nhom : '', diem: Number(r.Diem) || 0, moTa: r.MoTa
+        ten: r.MoTa || (dm ? (dm.TenLoi || dm.TenCong) : r.Ma),
+        nhom: dm ? dm.Nhom : '', diem: Number(r.Diem) || 0, moTa: ''
       };
     })
     .sort(function (a, b) { return a.ngay < b.ngay ? 1 : -1; });
@@ -210,17 +210,22 @@ function apiDsHocSinh(phien) {
   return hs.map(function (r) { return { maHS: r.MaHS, hoTen: r.HoTen, to: r.To, chucVu: r.ChucVu }; });
 }
 
-function apiNhatKyTuan(phien, maTuan) {
+function apiNhatKyThang(phien, thang) {
   const hs = indexBy(docBang(SHEETS.HS), 'MaHS');
   return docBang(SHEETS.NHATKY).filter(function (r) {
-    if (r.TrangThai !== 'HOAT_DONG' || r.MaTuan !== maTuan) return false;
+    if (r.TrangThai !== 'HOAT_DONG') return false;
+    if (Number(r.Thang) !== Number(thang)) return false;
     if (phien.vaiTro === 'TO_TRUONG' && phien.to) {
       return hs[r.MaHS] && hs[r.MaHS].To === phien.to;
     }
     return true;
   }).map(function (r) {
-    return { id: r.Id, maHS: r.MaHS, ngay: fmtNgay(r.Ngay), loai: r.Loai, ma: r.Ma, diem: r.Diem, moTa: r.MoTa, nguoiNhap: r.NguoiNhap };
-  });
+    return {
+      id: r.Id, maHS: r.MaHS, hoTen: hs[r.MaHS] ? hs[r.MaHS].HoTen : r.MaHS,
+      ngay: fmtNgay(r.Ngay), noiDung: r.MoTa, diem: Number(r.Diem) || 0,
+      nguoiNhap: r.NguoiNhap
+    };
+  }).sort(function (a, b) { return a.ngay < b.ngay ? 1 : -1; });
 }
 
 /**
@@ -233,8 +238,6 @@ function apiGhiNhatKy(phien, items) {
   lock.waitLock(30000);
   try {
     const hs = indexBy(docBang(SHEETS.HS), 'MaHS');
-    const loi = indexBy(docBang(SHEETS.LOI), 'MaLoi');
-    const cong = indexBy(docBang(SHEETS.CONG), 'MaCong');
     const daChot = {};
     docBang(SHEETS.THANG).forEach(function (r) {
       if (String(r.DaChot).toUpperCase() === 'TRUE') daChot[r.MaHS + '|' + r.Thang] = true;
@@ -245,19 +248,24 @@ function apiGhiNhatKy(phien, items) {
       const h = hs[it.maHS];
       if (!h) throw new Error('Không có học sinh ' + it.maHS);
       if (phien.vaiTro === 'TO_TRUONG' && phien.to && h.To !== phien.to) {
-        throw new Error('Bạn chỉ được chấm học sinh trong ' + phien.to);
+        throw new Error('Bạn chỉ được ghi cho học sinh trong ' + phien.to);
       }
-      const t = tuanCuaNgay(new Date(it.ngay + 'T12:00:00+07:00'));
+
+      const noiDung = String(it.noiDung || '').trim();
+      if (!noiDung) throw new Error('Chưa nhập nội dung cho ' + h.HoTen);
+
+      const t = tuanCuaNgay(ngayTu(it.ngay));
       if (!t) throw new Error('Ngày ' + it.ngay + ' không nằm trong lịch tuần học');
       if (daChot[it.maHS + '|' + t.Thang]) throw new Error('Tháng ' + t.Thang + ' đã chốt, không sửa được');
 
-      const dm = it.loai === 'CONG' ? cong[it.ma] : loi[it.ma];
-      if (!dm) throw new Error('Không có mã ' + it.ma + ' trong danh mục');
-      const diem = it.loai === 'CONG' ? Number(dm.DiemCong) : Number(dm.DiemTru);
+      // Điểm do người nhập tự gõ, chép đúng như trong sổ. Để trống thì bằng 0.
+      const diem = it.diem === '' || it.diem === null || it.diem === undefined
+        ? 0 : Number(it.diem);
+      if (isNaN(diem)) throw new Error('Điểm không phải số: "' + it.diem + '"');
 
       rows.push([
-        Utilities.getUuid(), it.maHS, it.ngay, t.MaTuan, t.Thang, t.HocKy,
-        it.loai, it.ma, diem, it.moTa || '', phien.ten, new Date(), 'HOAT_DONG'
+        Utilities.getUuid(), it.maHS, fmtNgay(it.ngay), t.MaTuan, t.Thang, t.HocKy,
+        diem > 0 ? 'CONG' : 'LOI', '', diem, noiDung, phien.ten, new Date(), 'HOAT_DONG'
       ]);
     });
 
