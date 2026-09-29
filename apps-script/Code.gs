@@ -455,7 +455,8 @@ function apiXuatExcel(phien) {
         return r.MaHS === h.MaHS && Number(r.Thang) === thang && r.Loai === 'LOI';
       }).map(function (r) {
         const d = new Date(r.Ngay);
-        return d.getDate() + '/' + (d.getMonth() + 1) + ': ' + (loi[r.Ma] ? loi[r.Ma].TenLoi : r.Ma);
+        const c = COT[r.Ma];
+        return d.getDate() + '/' + (d.getMonth() + 1) + ': ' + (r.MoTa || (c ? c.ten : r.Ma));
       }).join('\n');
       const xl = bangThang[h.MaHS + '|' + thang];
       return [i + 1, h.HoTen, dsLoi, (xl && NHAN[xl.XepLoai]) || '', (xl && xl.GhiChu) || ''];
