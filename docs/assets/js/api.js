@@ -111,13 +111,12 @@ const API = (function () {
     dsHocSinh: function () { return get({ action: 'dsHocSinh' }); },
     bangLop: function (thang) { return get({ action: 'bangLop', thang: thang }); },
     chiTietHS: function (maHS) { return get({ action: 'chiTietHS', maHS: maHS }); },
-    bangXepHangTo: function (maTuan) { return get({ action: 'bangXepHangTo', maTuan: maTuan || '' }); },
 
     // ---- Cần đăng nhập: nhập liệu (POST) ----
     dangNhap: function (u, p) { return post({ action: 'dangNhap', tenDangNhap: u, matKhau: p }); },
     dsHocSinhCuaToi: function () { return post({ action: 'dsHocSinh' }); },
-    nhatKyThang: function (thang) { return post({ action: 'nhatKyThang', thang: thang }); },
-    ghiNhatKy: function (items) { return post({ action: 'ghiNhatKy', items: items }); },
+    luoiTuan: function (maTuan) { return post({ action: 'luoiTuan', maTuan: maTuan }); },
+    luuLuoiTuan: function (maTuan, dong) { return post({ action: 'luuLuoiTuan', maTuan: maTuan, dong: dong }); },
     xoaNhatKy: function (id) { return post({ action: 'xoaNhatKy', id: id }); },
     luuXepLoai: function (items) { return post({ action: 'luuXepLoai', items: items }); },
 

@@ -9,7 +9,7 @@ const el = document.getElementById('noiDung');
 const NHAN = { TOT: 'TỐT', KHA: 'KHÁ', DAT: 'ĐẠT', CHUA_DAT: 'CHƯA ĐẠT' };
 const THANG_HOC = [9, 10, 11, 12, 1, 2, 3, 4, 5];
 
-let LOP = null, DANHMUC = null, DSHS = null;
+let LOP = null, DANHMUC = null, DSHS = null, LICHTUAN = null;
 
 // ---------- tiện ích ----------
 const esc = function (s) {
@@ -262,13 +262,13 @@ async function mhChiTiet() {
       <label class="f">Chọn học sinh</label>
       <select id="iHS">${DSHS.map(function (x) {
         return '<option value="' + esc(x.maHS) + '"' + (x.maHS === ma ? ' selected' : '') + '>' +
-          esc(x.hoTen) + (x.to ? ' — ' + esc(x.to) : '') + '</option>';
+          esc(x.hoTen) + '</option>';
       }).join('')}</select>
     </div>
 
     <div class="card">
       <h2>${esc(h.hoTen)}</h2>
-      <p class="hint">${esc(h.maHS)}${h.to ? ' · ' + esc(h.to) : ''}${h.chucVu ? ' · ' + esc(h.chucVu) : ''}</p>
+      <p class="hint">${esc(h.maHS)}${h.chucVu ? ' · ' + esc(h.chucVu) : ''}</p>
       <div class="stat">
         <div><div class="n ${tongDiem < 0 ? 'diem am' : 'diem duong'}">${tongDiem > 0 ? '+' : ''}${tongDiem}</div>
           <div class="l">Điểm thi đua cả năm</div></div>
@@ -324,224 +324,175 @@ async function mhChiTiet() {
 // ---------- Xếp hạng thi đua ----------
 async function mhThiDua() {
   loading();
-  const bxh = await API.bangXepHangTo();
-  const coTo = bxh.bang.length > 0;
-  if (!DSHS) DSHS = await API.dsHocSinh();
-
   const thang = Number(thamSo('thang')) || thangMacDinh();
   const ds = await API.bangLop(thang);
   const top = ds.slice().sort(function (a, b) { return (b.diemThiDua || 0) - (a.diemThiDua || 0); });
 
   el.innerHTML = `
-    ${coTo ? `<div class="card">
-      <h2>Xếp hạng tổ</h2>
-      <p class="hint">Tuần ${esc(LOP.tuanHienTai ? LOP.tuanHienTai.SoTuan : '?')} ·
-        điểm tổ = tổng điểm thành viên + điểm có sẵn</p>
-      <div class="tbl-wrap"><table>
-        <thead><tr><th>Hạng</th><th>Tổ</th><th style="text-align:right">Điểm TV</th>
-          <th style="text-align:right">Có sẵn</th><th style="text-align:right">Tổng</th></tr></thead>
-        <tbody>${bxh.bang.map(function (r) {
-          return `<tr>
-            <td><span class="hang ${r.hang === 1 ? 'top1' : ''}">${r.hang === 1 ? '🏆' : r.hang}</span></td>
-            <td><strong>${esc(r.to)}</strong></td>
-            <td style="text-align:right">${diemHTML(r.diemHS)}</td>
-            <td style="text-align:right" class="diem">${esc(r.diemCoSan)}</td>
-            <td style="text-align:right"><strong class="diem">${esc(r.tong)}</strong></td>
-          </tr>`;
-        }).join('')}</tbody>
-      </table></div>
-    </div>` : ''}
-
     <div class="card">
       <div class="row" style="justify-content:space-between;align-items:flex-end">
         <div>
-          <h2>Xếp hạng cá nhân – tháng ${esc(thang)}</h2>
-          <p class="hint" style="margin:0">Theo điểm thi đua cộng trừ trong tháng.</p>
+          <h2>Xếp hạng thi đua — tháng ${esc(thang)}</h2>
+          <p class="hint" style="margin:0">Cộng dồn điểm các tuần trong tháng, lấy từ sổ thi đua.</p>
         </div>
         <div>${oChonThang(thang)}</div>
       </div>
+    </div>
+
+    <div class="card">
       <div class="tbl-wrap"><table>
         <thead><tr><th>Hạng</th><th>Họ tên</th><th style="text-align:right">Điểm</th></tr></thead>
         <tbody>${top.map(function (r, i) {
           return `<tr style="cursor:pointer" data-ma="${esc(r.maHS)}">
             <td><span class="hang ${i === 0 ? 'top1' : ''}">${i === 0 ? '🏆' : i + 1}</span></td>
-            <td>${esc(r.hoTen)}${r.to ? ' <span style="color:var(--ink-mute);font-size:12.5px">' + esc(r.to) + '</span>' : ''}</td>
+            <td>${esc(r.hoTen)}</td>
             <td style="text-align:right">${diemHTML(r.diemThiDua)}</td>
           </tr>`;
         }).join('')}</tbody>
       </table></div>
     </div>`;
 
-  const oT = q('#iThang');
-  if (oT) oT.onchange = function () { location.hash = '#/thi-dua?thang=' + this.value; };
-
+  q('#iThang').onchange = function () { location.hash = '#/thi-dua?thang=' + this.value; };
   qa('tbody tr[data-ma]').forEach(function (tr) {
     tr.onclick = function () { location.hash = '#/chi-tiet?ma=' + tr.dataset.ma; };
   });
 }
 
-// ---------- Ghi sổ (cán bộ lớp) ----------
-// Mục đích: chép lại y như sổ giấy của trường. Gõ ngày, tên, nội dung, điểm.
-// Không ép chọn theo danh mục — danh mục chỉ là gợi ý gõ nhanh.
+// ---------- Sổ thi đua tuần (cán bộ lớp) ----------
+// Dựng đúng lưới của sổ giấy: mỗi học sinh một dòng, 6 cột điểm cộng/trừ.
+// Mỗi mục gõ trong một ô = 1 lượt, tính điểm theo cột đó. Tổng tự cộng.
 async function mhChamDiem() {
   if (!vaiTro()) { location.hash = '#/dang-nhap'; return; }
   loading();
 
-  const thang = Number(thamSo('thang')) || thangMacDinh();
-  const [hs, daGhi] = await Promise.all([
-    API.dsHocSinhCuaToi(),
-    API.nhatKyThang(thang)
-  ]);
-  if (!DANHMUC) { try { DANHMUC = await API.danhMuc(); } catch (e) { DANHMUC = { loi: [], cong: [] }; } }
+  if (!LICHTUAN) LICHTUAN = await API.lichTuan();
+  const maTuan = thamSo('tuan') || (LOP.tuanHienTai && LOP.tuanHienTai.MaTuan) ||
+    (LICHTUAN[0] && LICHTUAN[0].MaTuan);
+  const d = await API.luoiTuan(maTuan);
 
-  const goiY = DANHMUC.loi.map(function (l) { return l.TenLoi; })
-    .concat(DANHMUC.cong.map(function (c) { return c.TenCong; }));
+  const oChonTuan = '<select id="iTuan" style="min-width:230px">' + LICHTUAN.map(function (t) {
+    return '<option value="' + esc(t.MaTuan) + '"' + (t.MaTuan === maTuan ? ' selected' : '') + '>' +
+      'Tuần ' + esc(t.SoTuan) + ' — ' + esc(String(t.TuNgay).slice(8, 10) + '/' + String(t.TuNgay).slice(5, 7)) +
+      ' đến ' + esc(String(t.DenNgay).slice(8, 10) + '/' + String(t.DenNgay).slice(5, 7)) + '</option>';
+  }).join('') + '</select>';
+
+  // Nhóm cột cho đúng kiểu đầu bảng 2 tầng của sổ giấy
+  const cot = d.cot;
+  const cotTru = cot.filter(function (c) { return c.ma !== 'CONG'; });
 
   el.innerHTML = `
     <div class="card">
       <div class="row" style="justify-content:space-between;align-items:flex-end">
         <div>
-          <h2>Ghi sổ tháng ${esc(thang)}</h2>
-          <p class="hint" style="margin:0">Chép lại từ sổ theo dõi của lớp. Gõ xong một dòng thì bấm
-            <strong>Thêm dòng</strong> (hoặc Enter), làm hết rồi bấm <strong>Lưu tất cả</strong>.</p>
+          <h2>Sổ thi đua — Tuần ${esc(d.tuan.soTuan)}, tháng ${esc(d.tuan.thang)}</h2>
+          <p class="hint" style="margin:0">Từ ${esc(d.tuan.tuNgay)} đến ${esc(d.tuan.denNgay)} ·
+            ${d.daChot ? '<span class="badge DAT">tháng đã chốt, không sửa được</span>'
+                       : 'Gõ mỗi lượt một mục, nhiều mục ngăn bằng dấu phẩy'}</p>
         </div>
-        <div>${oChonThang(thang)}</div>
+        <div>${oChonTuan}</div>
       </div>
     </div>
 
     <div class="card">
-      <form id="fThem" class="grid" style="grid-template-columns:1fr;gap:10px">
-        <div class="row" style="gap:10px">
-          <div style="flex:2;min-width:180px">
-            <label class="f">Học sinh</label>
-            <select id="iHS">${hs.map(function (h) {
-              return '<option value="' + esc(h.maHS) + '">' + esc(h.hoTen) + '</option>';
-            }).join('')}</select>
-          </div>
-          <div style="flex:1;min-width:140px">
-            <label class="f">Ngày</label>
-            <input type="date" id="iNgay" value="${hnay()}" required>
-          </div>
-        </div>
-        <div class="row" style="gap:10px">
-          <div style="flex:3;min-width:220px">
-            <label class="f">Nội dung (chép y như trong sổ)</label>
-            <input id="iNoiDung" list="dsGoiY" placeholder="ví dụ: Đi học muộn" required>
-            <datalist id="dsGoiY">${goiY.map(function (t) {
-              return '<option value="' + esc(t) + '">';
-            }).join('')}</datalist>
-          </div>
-          <div style="flex:1;min-width:110px">
-            <label class="f">Điểm <span style="font-weight:400">(để trống nếu sổ không ghi)</span></label>
-            <input id="iDiem" type="number" step="1" placeholder="-1">
-          </div>
-        </div>
-        <div class="row">
-          <button class="primary" type="submit">Thêm dòng</button>
-          <span class="hint" style="margin:0">Điểm trừ gõ số âm (−1, −2). Điểm cộng gõ số dương (1, 3).</span>
-        </div>
-      </form>
-    </div>
-
-    <div class="card" id="boxChoLuu" style="display:none">
-      <h2>Chờ lưu <span id="demCho" style="color:var(--ink-mute);font-weight:400"></span></h2>
-      <div class="tbl-wrap"><table>
-        <thead><tr><th>Ngày</th><th>Học sinh</th><th>Nội dung</th>
-          <th style="text-align:right">Điểm</th><th></th></tr></thead>
-        <tbody id="tbCho"></tbody>
+      <div class="tbl-wrap"><table class="luoi">
+        <thead>
+          <tr>
+            <th rowspan="2" style="min-width:34px">TT</th>
+            <th rowspan="2" style="min-width:150px">Họ và tên</th>
+            <th rowspan="2" class="c-cong">Điểm cộng<br><span class="dv">(+${esc(cot[0].diem)}đ / mục)</span></th>
+            <th colspan="${cotTru.length}" style="text-align:center">Điểm trừ</th>
+            <th rowspan="2" style="text-align:right;min-width:70px">Tổng</th>
+          </tr>
+          <tr>
+            ${cotTru.map(function (c) {
+              return '<th class="c-tru">' + esc(c.ten.replace(' - ', '<br>').replace('Hạ 1 bậc HK', 'Hạ 1 bậc')) +
+                '<br><span class="dv">(' + esc(c.diem) + 'đ)</span></th>';
+            }).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          ${d.dong.map(function (r, i) {
+            return `<tr data-ma="${esc(r.maHS)}">
+              <td>${i + 1}</td>
+              <td class="ten">${esc(r.hoTen)}${r.chucVu ? '<br><span class="cv">(' + esc(r.chucVu) + ')</span>' : ''}</td>
+              ${cot.map(function (c) {
+                return '<td><input class="o" data-cot="' + esc(c.ma) + '" data-diem="' + esc(c.diem) + '" ' +
+                  'value="' + esc(r.o[c.ma] || '') + '"' + (d.daChot ? ' disabled' : '') + '></td>';
+              }).join('')}
+              <td class="tong" style="text-align:right">${diemHTML(r.tong)}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="${2 + cot.length}" style="text-align:right"><strong>TỔNG:</strong></td>
+            <td style="text-align:right"><strong id="tongHS" class="diem">${esc(d.tongHS)}</strong></td>
+          </tr>
+          <tr>
+            <td colspan="${2 + cot.length}" style="text-align:right"><strong>ĐIỂM CÓ SẴN:</strong></td>
+            <td style="text-align:right"><strong class="diem">${esc(d.diemCoSan)}</strong></td>
+          </tr>
+          <tr>
+            <td colspan="${2 + cot.length}" style="text-align:right"><strong>ĐIỂM TỔNG:</strong></td>
+            <td style="text-align:right"><strong id="diemTong" class="diem">${esc(d.tongHS + d.diemCoSan)}</strong></td>
+          </tr>
+        </tfoot>
       </table></div>
-      <div class="row" style="margin-top:12px">
-        <button class="primary" id="btnLuu">Lưu tất cả</button>
-        <button id="btnXoaHet">Xoá hết</button>
-      </div>
-    </div>
 
-    <div class="card">
-      <h2>Đã ghi trong tháng ${esc(thang)} <span style="color:var(--ink-mute);font-weight:400">(${daGhi.length} dòng)</span></h2>
-      ${daGhi.length ? `<div class="tbl-wrap"><table>
-        <thead><tr><th>Ngày</th><th>Học sinh</th><th>Nội dung</th>
-          <th style="text-align:right">Điểm</th><th></th></tr></thead>
-        <tbody>${daGhi.map(function (r) {
-          return `<tr>
-            <td style="white-space:nowrap">${esc(r.ngay)}</td>
-            <td>${esc(r.hoTen)}</td>
-            <td>${esc(r.noiDung)}</td>
-            <td style="text-align:right">${diemHTML(r.diem)}</td>
-            <td><button class="sm btnXoa" data-id="${esc(r.id)}">Xoá</button></td>
-          </tr>`;
-        }).join('')}</tbody>
-      </table></div>` : '<div class="empty">Chưa ghi dòng nào trong tháng này.</div>'}
+      ${d.daChot ? '' : `<div class="row" style="margin-top:14px">
+        <button class="primary" id="btnLuu">Lưu tuần này</button>
+        <span class="hint" style="margin:0">Lưu xong web sẽ ghi đè toàn bộ tuần ${esc(d.tuan.soTuan)}
+          bằng nội dung đang hiện trên bảng.</span>
+      </div>`}
     </div>`;
 
-  q('#iThang').onchange = function () { location.hash = '#/cham-diem?thang=' + this.value; };
+  q('#iTuan').onchange = function () { location.hash = '#/cham-diem?tuan=' + this.value; };
 
-  const cho = [];   // các dòng đang chờ lưu
+  if (d.daChot) return;
 
-  function veLaiCho() {
-    const box = q('#boxChoLuu');
-    box.style.display = cho.length ? '' : 'none';
-    q('#demCho').textContent = cho.length ? '(' + cho.length + ' dòng)' : '';
-    q('#tbCho').innerHTML = cho.map(function (r, i) {
-      return `<tr>
-        <td style="white-space:nowrap">${esc(r.ngay)}</td>
-        <td>${esc(r.hoTen)}</td>
-        <td>${esc(r.noiDung)}</td>
-        <td style="text-align:right">${diemHTML(r.diem)}</td>
-        <td><button class="sm btnBo" data-i="${i}">Bỏ</button></td>
-      </tr>`;
-    }).join('');
-    qa('.btnBo').forEach(function (b) {
-      b.onclick = function () { cho.splice(Number(b.dataset.i), 1); veLaiCho(); };
-    });
+  /** Đếm số mục trong một ô: ngăn bằng dấu phẩy, chấm phẩy hoặc xuống dòng. */
+  function demMuc(v) {
+    return String(v || '').split(/[,;\n]+/)
+      .map(function (x) { return x.trim(); })
+      .filter(function (x) { return x.length > 0; }).length;
   }
 
-  q('#fThem').onsubmit = function (ev) {
-    ev.preventDefault();
-    const sel = q('#iHS');
-    cho.push({
-      maHS: sel.value,
-      hoTen: sel.options[sel.selectedIndex].text,
-      ngay: q('#iNgay').value,
-      noiDung: q('#iNoiDung').value.trim(),
-      diem: q('#iDiem').value === '' ? 0 : Number(q('#iDiem').value)
+  function tinhLaiTong() {
+    let tong = 0;
+    qa('tbody tr[data-ma]').forEach(function (tr) {
+      let t = 0;
+      tr.querySelectorAll('.o').forEach(function (inp) {
+        t += demMuc(inp.value) * Number(inp.dataset.diem);
+      });
+      tr.querySelector('.tong').innerHTML = diemHTML(t);
+      tong += t;
     });
-    q('#iNoiDung').value = '';
-    q('#iDiem').value = '';
-    q('#iNoiDung').focus();
-    veLaiCho();
-  };
+    q('#tongHS').textContent = tong;
+    q('#tongHS').className = 'diem ' + (tong > 0 ? 'duong' : (tong < 0 ? 'am' : ''));
+    q('#diemTong').textContent = tong + Number(d.diemCoSan);
+  }
 
-  q('#btnXoaHet').onclick = function () { cho.length = 0; veLaiCho(); };
+  qa('.o').forEach(function (inp) { inp.oninput = tinhLaiTong; });
 
   q('#btnLuu').onclick = async function () {
+    const dong = qa('tbody tr[data-ma]').map(function (tr) {
+      const o = {};
+      tr.querySelectorAll('.o').forEach(function (inp) { o[inp.dataset.cot] = inp.value; });
+      return { maHS: tr.dataset.ma, o: o };
+    });
     this.disabled = true; this.textContent = 'Đang lưu…';
     try {
-      const r = await API.ghiNhatKy(cho.map(function (x) {
-        return { maHS: x.maHS, ngay: x.ngay, noiDung: x.noiDung, diem: x.diem };
-      }));
+      const r = await API.luuLuoiTuan(maTuan, dong);
       el.insertAdjacentHTML('afterbegin',
-        '<div class="msg ok">Đã lưu ' + r.soBanGhi + ' dòng.</div>');
+        '<div class="msg ok">Đã lưu tuần ' + esc(d.tuan.soTuan) + ' (' + r.soMuc + ' mục).</div>');
       window.scrollTo(0, 0);
-      setTimeout(function () { mhChamDiem().catch(loi); }, 700);
+      this.disabled = false; this.textContent = 'Lưu tuần này';
     } catch (e) {
       el.insertAdjacentHTML('afterbegin', '<div class="msg err">' + esc(e.message) + '</div>');
       window.scrollTo(0, 0);
-      this.disabled = false; this.textContent = 'Lưu tất cả';
+      this.disabled = false; this.textContent = 'Lưu tuần này';
     }
   };
-
-  qa('.btnXoa').forEach(function (b) {
-    b.onclick = async function () {
-      if (!confirm('Xoá dòng này?')) return;
-      b.disabled = true;
-      try {
-        await API.xoaNhatKy(b.dataset.id);
-        mhChamDiem().catch(loi);
-      } catch (e) {
-        alert(e.message); b.disabled = false;
-      }
-    };
-  });
 }
 
 // ---------- Quản trị (GVCN) ----------
@@ -566,22 +517,7 @@ async function mhQuanTri() {
       </div>
       <div id="kqQT" style="margin-top:12px"></div>
     </div>
-    <div class="card">
-      <h2>Những chỗ đang dùng giá trị mặc định</h2>
-      <p class="hint">Các con số dưới đây do hệ thống tự đặt vì hai file gốc không nói rõ.
-        Sửa trực tiếp trong sheet <code>CauHinh</code> của Google Sheet là web đổi theo ngay.</p>
-      <details class="qa"><summary>3 lỗi nhỏ = 1 lần bị ghi sổ đầu bài</summary>
-        <p>Quy định ghi "lỗi chưa bị trừ hạnh kiểm tháng này tính vào tháng sau" nhưng không nói
-        bao nhiêu lỗi thì bị trừ. Khóa <code>NguongLoiNho</code>.</p></details>
-      <details class="qa"><summary>Điểm thi đua không ảnh hưởng xếp loại</summary>
-        <p>Xếp loại tính theo loại lỗi đúng quy chế trường. Muốn thêm luật theo điểm thì đổi
-        <code>DungDiemDeXepLoai</code> thành TRUE.</p></details>
-      <details class="qa"><summary>Danh sách tổ</summary>
-        <p>File Excel gốc không có cột tổ. Sửa cột <code>To</code> trong sheet <code>HocSinh</code>.
-        Để trống hết thì phần xếp hạng tổ tự ẩn đi.</p></details>
-      <p class="hint" style="margin-top:12px">Danh sách đầy đủ nằm trong file
-        <code>tai-lieu/CAU-HOI-CHO-CO.md</code> của dự án.</p>
-    </div>`;
+`;
 
   const bao = function (cls, t) { q('#kqQT').innerHTML = '<div class="msg ' + cls + '">' + t + '</div>'; };
 

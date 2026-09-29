@@ -5,6 +5,33 @@
  */
 
 const BAC = ['CHUA_DAT', 'DAT', 'KHA', 'TOT'];   // thấp → cao
+
+/**
+ * 6 cột của sổ thi đua tuần (đúng như ảnh sổ giấy).
+ * Mỗi mục ghi trong một ô = 1 lượt, tính điểm theo cột đó.
+ * `nhom` quyết định ảnh hưởng tới xếp loại hạnh kiểm.
+ */
+const COT = {
+  CONG:       { ten: 'Điểm cộng',                 nhom: '',         khoaCfg: 'Diem_CONG' },
+  NHO_TRUONG: { ten: 'Lỗi nhỏ - lỗi trường',      nhom: 'NHO',      khoaCfg: 'Diem_NHO_TRUONG' },
+  NHO_LOP:    { ten: 'Lỗi nhỏ - lỗi lớp',         nhom: 'NHO',      khoaCfg: 'Diem_NHO_LOP' },
+  HB_TRUONG:  { ten: 'Hạ 1 bậc HK - lỗi trường',  nhom: 'HA_BAC',   khoaCfg: 'Diem_HB_TRUONG' },
+  HB_LOP:     { ten: 'Hạ 1 bậc HK - lỗi lớp',     nhom: 'HA_BAC',   khoaCfg: 'Diem_HB_LOP' },
+  HK_YEU:     { ten: 'Lỗi HK yếu',                nhom: 'CHUA_DAT', khoaCfg: 'Diem_HK_YEU' }
+};
+
+const MAC_DINH_DIEM = { CONG: 1, NHO_TRUONG: -2, NHO_LOP: -1, HB_TRUONG: -6, HB_LOP: -2, HK_YEU: -12 };
+
+/** Điểm của từng cột, đọc từ CauHinh, không có thì dùng mặc định. */
+function diemCot(cfg) {
+  const d = {};
+  Object.keys(COT).forEach(function (k) {
+    const v = Number(cfg[COT[k].khoaCfg]);
+    d[k] = isNaN(v) || cfg[COT[k].khoaCfg] === '' || cfg[COT[k].khoaCfg] === undefined
+      ? MAC_DINH_DIEM[k] : v;
+  });
+  return d;
+}
 const NHAN = { TOT: 'TỐT', KHA: 'KHÁ', DAT: 'ĐẠT', CHUA_DAT: 'CHƯA ĐẠT' };
 
 function haBac(bac, n) {
@@ -30,9 +57,8 @@ function tinhLaiTatCa() {
   try {
     const cfg = docCauHinh();
     const hs = docBang(SHEETS.HS).filter(function (r) { return r.TrangThai === 'DANG_HOC'; });
-    const loi = indexBy(docBang(SHEETS.LOI), 'MaLoi');
-    const cong = indexBy(docBang(SHEETS.CONG), 'MaCong');
     const nhatky = docBang(SHEETS.NHATKY).filter(function (r) { return r.TrangThai === 'HOAT_DONG'; });
+    const diem6 = diemCot(cfg);
 
     const thangHK1 = String(cfg.ThangHK1).split(',').map(Number);
     const thangHK2 = String(cfg.ThangHK2).split(',').map(Number);
@@ -64,13 +90,11 @@ function tinhLaiTatCa() {
 
     hs.forEach(function (h) {
       let viLoiNho = 0;               // lỗi nhỏ lẻ tồn kho, chuyển giữa các tháng
-      let demTheoNguongKy = {};       // đếm lỗi có NguongHocKy, reset mỗi học kỳ
       let kyTruoc = null;
 
       thuTuThang.forEach(function (thang) {
         const ky = thangHK1.indexOf(thang) >= 0 ? 'HK1' : 'HK2';
         if (ky !== kyTruoc) {
-          demTheoNguongKy = {};
           if (resetKy) viLoiNho = 0;
           kyTruoc = ky;
         }
@@ -88,25 +112,15 @@ function tinhLaiTatCa() {
         let soLoiNho = 0, soHaBac = 0, coChuaDat = false, ghiSoTrucTiep = 0, diem = 0;
 
         rows.forEach(function (r) {
-          if (r.Loai === 'CONG') {
-            diem += Number(r.Diem) || (cong[r.Ma] ? Number(cong[r.Ma].DiemCong) : 0);
-            return;
-          }
-          const L = loi[r.Ma];
-          if (!L) return;
-          diem += Number(r.Diem) || Number(L.DiemTru);
+          const c = COT[r.Ma];
+          // Điểm lấy từ bản ghi; nếu trống thì suy từ cột.
+          const d = Number(r.Diem);
+          diem += isNaN(d) ? (c ? diem6[r.Ma] : 0) : d;
+          if (!c) return;
 
-          let nhom = L.Nhom;
-          const nguong = Number(L.NguongHocKy) || 0;
-          if (nguong > 0) {
-            demTheoNguongKy[L.MaLoi] = (demTheoNguongKy[L.MaLoi] || 0) + 1;
-            nhom = demTheoNguongKy[L.MaLoi] >= nguong ? 'HA_BAC' : 'NHO';
-          }
-
-          if (nhom === 'CHUA_DAT') coChuaDat = true;
-          else if (nhom === 'HA_BAC') soHaBac++;
-          else if (L.MaLoi === 'NN05') ghiSoTrucTiep++;   // bị ghi sổ đầu bài: tính thẳng
-          else soLoiNho++;
+          if (c.nhom === 'CHUA_DAT') coChuaDat = true;
+          else if (c.nhom === 'HA_BAC') soHaBac++;
+          else if (c.nhom === 'NHO') soLoiNho++;
         });
 
         const tongNho = soLoiNho + (congDon ? viLoiNho : 0);

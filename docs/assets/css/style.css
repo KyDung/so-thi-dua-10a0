@@ -156,3 +156,26 @@ details.qa summary { cursor: pointer; font-weight: 550; }
 @keyframes dots { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75% { content: "..."; } }
 
 .foot { text-align: center; color: var(--ink-mute); font-size: 12.5px; padding: 24px 16px 40px; }
+
+/* ---------- Lưới sổ thi đua tuần (dựng theo sổ giấy) ---------- */
+table.luoi { font-size: 13.5px; }
+table.luoi th, table.luoi td { border: 1px solid var(--line); padding: 5px 6px; }
+table.luoi thead th {
+  background: var(--brand-soft); color: var(--ink);
+  text-transform: none; font-size: 12px; text-align: center; vertical-align: middle;
+  line-height: 1.3;
+}
+table.luoi th.c-cong { min-width: 130px; }
+table.luoi th.c-tru { min-width: 110px; }
+table.luoi .dv { font-weight: 400; color: var(--ink-mute); font-size: 11px; }
+table.luoi td.ten { font-weight: 550; }
+table.luoi td.ten .cv { font-weight: 400; color: var(--ink-mute); font-size: 11.5px; }
+table.luoi input.o {
+  width: 100%; padding: 5px 7px; font-size: 13px;
+  border: 1px solid transparent; border-radius: 5px; background: transparent;
+}
+table.luoi input.o:hover { border-color: var(--line); }
+table.luoi input.o:focus { background: var(--card); border-color: var(--brand); }
+table.luoi input.o:disabled { color: var(--ink-mute); }
+table.luoi tbody tr:hover { background: transparent; }
+table.luoi tfoot td { background: var(--bg); border-top: 2px solid var(--line); }

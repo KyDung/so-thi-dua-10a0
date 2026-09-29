@@ -106,7 +106,16 @@ const DS_CAUHINH = [
   ['ResetViDauHocKy', 'TRUE', 'Xóa ví lỗi nhỏ lẻ khi sang học kỳ mới (Q1)'],
   ['GhiSo_KhongDuocTot', '3', 'Từ N lần ghi sổ đầu bài trở lên thì không được TỐT'],
   ['GhiSo_KhongDuocKha', '5', 'Từ N lần ghi sổ đầu bài trở lên thì không được KHÁ'],
-  ['DiemCoSanTo', '5', 'Điểm khởi tạo mỗi tổ mỗi tuần (Q5)'],
+  ['DiemCoSan', '5', 'Điểm có sẵn mỗi tuần (dòng "ĐIỂM CÓ SẴN" trong sổ)'],
+
+  // Điểm của từng cột trong sổ thi đua tuần. Mỗi mục ghi trong ô = 1 lượt.
+  ['Diem_CONG', '1', 'ĐIỂM CỘNG - mỗi mục'],
+  ['Diem_NHO_TRUONG', '-2', 'Lỗi nhỏ - lỗi trường'],
+  ['Diem_NHO_LOP', '-1', 'Lỗi nhỏ - lỗi lớp'],
+  ['Diem_HB_TRUONG', '-6', 'Lỗi hạ 1 bậc HK - lỗi trường'],
+  ['Diem_HB_LOP', '-2', 'Lỗi hạ 1 bậc HK - lỗi lớp'],
+  ['Diem_HK_YEU', '-12', 'Lỗi HK yếu'],
+
   ['TuDongXepLoai', 'FALSE', 'FALSE = người nhập tự chọn xếp loại. TRUE = web tự tính theo quy chế.'],
   ['DungDiemDeXepLoai', 'FALSE', 'Chỉ dùng khi TuDongXepLoai = TRUE'],
   ['NguongDiem_Tot', '0', 'Chỉ dùng khi DungDiemDeXepLoai = TRUE'],
