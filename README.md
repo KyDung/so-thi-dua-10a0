@@ -1,4 +1,6 @@
-# Theo dõi thi đua – hạnh kiểm lớp 10A0-K67
+# Sổ điện tử theo dõi thi đua – hạnh kiểm lớp 10A0-K67
+
+🔗 **Web đang chạy: https://kydung.github.io/so-thi-dua-10a0/**
 
 Web tĩnh trên GitHub Pages + Google Apps Script làm backend + Google Sheet làm database.
 Chi phí: **0 đồng**, không cần máy chủ.
@@ -75,21 +77,13 @@ Bấm Triển khai, copy URL dạng `https://script.google.com/macros/s/AKfycb..
 > Mỗi lần sửa code phải **Triển khai → Quản lý các bản triển khai → sửa → Phiên bản mới**,
 > nếu không URL vẫn chạy code cũ.
 
-### Bước 5 — Đưa web lên GitHub Pages
+### Bước 5 — GitHub Pages ✅ ĐÃ XONG
 
-```bash
-git init
-git add .
-git commit -m "Khởi tạo web theo dõi thi đua - hạnh kiểm"
-git branch -M main
-git remote add origin https://github.com/<tên-tài-khoản>/<tên-repo>.git
-git push -u origin main
-```
+Web đang chạy tại **https://kydung.github.io/so-thi-dua-10a0/**
 
-Trên GitHub: `Settings` → `Pages` → Source: **Deploy from a branch** → Branch: `main`,
-thư mục **`/docs`** → Save.
+Repo: https://github.com/KyDung/so-thi-dua-10a0 (công khai, Pages lấy từ nhánh `main` thư mục `/docs`)
 
-Sau 1–2 phút web chạy tại `https://<tên-tài-khoản>.github.io/<tên-repo>/`.
+Từ giờ mỗi lần `git push` là web tự cập nhật sau 1–2 phút.
 
 ### Bước 6 — Nối web với backend
 
@@ -97,6 +91,14 @@ Mở [docs/assets/js/config.js](docs/assets/js/config.js), sửa đúng 1 dòng:
 
 ```javascript
 API_URL: 'https://script.google.com/macros/s/AKfycb.../exec',
+```
+
+rồi chạy:
+
+```bash
+git add docs/assets/js/config.js
+git commit -m "Nối web với Apps Script"
+git push
 ```
 
 Commit và push. Sau 1–2 phút GitHub Pages cập nhật, web bắt đầu chạy với dữ liệu thật.
