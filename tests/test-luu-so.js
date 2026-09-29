@@ -52,6 +52,7 @@ function moi() {
   ['A', 'B'].forEach((MaHS, i) => add('HocSinh', { MaHS, HoTen: 'Học sinh thử ' + MaHS, To: 'Tổ ' + (i + 1), TrangThai: 'DANG_HOC' }));
   add('TuanHoc', { MaTuan: 'T1', SoTuan: 1, TuNgay: '2026-09-07', DenNgay: '2026-09-13', Thang: 9, HocKy: 'HK1' });
   add('TuanHoc', { MaTuan: 'T2', SoTuan: 2, TuNgay: '2026-10-05', DenNgay: '2026-10-11', Thang: 10, HocKy: 'HK1' });
+  add('TuanHoc', { MaTuan: 'T3', SoTuan: 3, TuNgay: '2026-09-28', DenNgay: '2026-10-04', Thang: 10, HocKy: 'HK1' });
   return { ctx, tables, add };
 }
 const lt = { ten: 'test', vaiTro: 'LOP_TRUONG' };
@@ -125,6 +126,17 @@ test('Chi tiết trả khoảng tuần; khóa ký tự sinh và giữ ổn đị
   const d = ctx.apiChiTietHS('A').chiTiet[0];
   assert.equal(d.soTuan, 1); assert.equal(d.denNgay, '2026-09-13');
   assert.equal(ctx.kyChuoi('test'), ctx.kyChuoi('test'));
+});
+test('Tuần vắt sang tháng sau vẫn theo tháng bắt đầu tuần', () => {
+  const { ctx } = moi();
+  const a = row(ctx, 'A', 'T3'); a.o.NHO_LOP = 'MTT';
+  assert.equal(ctx.apiLuoiTuan(lt, 'T3').tuan.thang, 9);
+  ctx.apiLuuLuoiTuan(lt, 'T3', [a]);
+  assert.equal(ctx.apiBangLop(9)[0].diemThiDua, -1);
+  assert.equal(ctx.apiBangLop(10)[0].diemThiDua, 0);
+  const ct = ctx.apiChiTietHS('A');
+  assert.equal(ct.chiTiet[0].thang, 9);
+  assert.ok(ct.tuan.some(t => t.maTuan === 'T3' && t.thang === 9));
 });
 test('Phiên dùng quyền hiện tại, chặn tài khoản khóa và hạn phiên không hợp lệ', () => {
   const { ctx, add, tables } = moi();

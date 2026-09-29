@@ -45,9 +45,46 @@ function tuanCuaNgay(d) {
   const ngay = fmtNgay(d);
   const ds = docBang(SHEETS.TUAN);
   for (let i = 0; i < ds.length; i++) {
-    if (fmtNgay(ds[i].TuNgay) <= ngay && ngay <= fmtNgay(ds[i].DenNgay)) return ds[i];
+    if (!laTuanHoc(ds[i])) continue;
+    if (fmtNgay(ds[i].TuNgay) <= ngay && ngay <= fmtNgay(ds[i].DenNgay)) {
+      const t = Object.assign({}, ds[i]);
+      t.Thang = thangTheoDoiTuan(t);
+      t.HocKy = hocKyTheoThang(t.Thang);
+      return t;
+    }
   }
   return null;
+}
+
+/**
+ * Tháng theo dõi của một tuần trong sổ lớp.
+ * Tuần vắt tháng được tính theo tháng của ngày bắt đầu tuần; riêng tuần mở năm
+ * học kiểu 31/8-6/9 vẫn thuộc tháng 9.
+ */
+/** Tuần có đi học không (chưa bị tích nghỉ và đã được đánh số). */
+function laTuanHoc(t) {
+  if (!t || !t.MaTuan) return false;
+  return !(t.NghiHoc === true || String(t.NghiHoc).toUpperCase() === 'TRUE');
+}
+
+function thangTheoDoiTuan(tuan) {
+  const tu = ngayTu(tuan.TuNgay);
+  const den = ngayTu(tuan.DenNgay);
+  const thangTu = tu.getMonth() + 1;
+  const thangDen = den.getMonth() + 1;
+  if (thangTu === thangDen) return thangTu;
+  return [6, 7, 8].indexOf(thangTu) >= 0 ? thangDen : thangTu;
+}
+
+function hocKyTheoThang(thang, cfg) {
+  cfg = cfg || docCauHinh();
+  const hk1 = String(cfg.ThangHK1 || '').split(',').map(Number);
+  return hk1.indexOf(Number(thang)) >= 0 ? 'HK1' : 'HK2';
+}
+
+function thangCuaNhatKy(r, tuan) {
+  const t = tuan && tuan[r.MaTuan];
+  return t ? thangTheoDoiTuan(t) : Number(r.Thang);
 }
 
 /**

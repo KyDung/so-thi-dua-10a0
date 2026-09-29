@@ -63,6 +63,7 @@ function tinhLaiDuLieu() {
     const cfg = docCauHinh();
     const hs = docBang(SHEETS.HS).filter(function (r) { return r.TrangThai === 'DANG_HOC'; });
     const nhatky = docBang(SHEETS.NHATKY).filter(function (r) { return r.TrangThai === 'HOAT_DONG'; });
+    const tuan = indexBy(docBang(SHEETS.TUAN), 'MaTuan');
     const diem6 = diemCot(cfg);
 
     const thangHK1 = String(cfg.ThangHK1).split(',').map(Number);
@@ -77,12 +78,12 @@ function tinhLaiDuLieu() {
     const gsKhongKha = Number(cfg.GhiSo_KhongDuocKha) || 5;
     const dungDiem = String(cfg.DungDiemDeXepLoai).toUpperCase() === 'TRUE';
 
-    // Gom nhật ký theo MaHS -> Thang
+    // Gom nhật ký theo MaHS -> tháng theo dõi của tuần.
     const theoHS = {};
     nhatky.forEach(function (r) {
       const k = r.MaHS;
       if (!theoHS[k]) theoHS[k] = {};
-      const t = Number(r.Thang);
+      const t = thangCuaNhatKy(r, tuan);
       if (!theoHS[k][t]) theoHS[k][t] = [];
       theoHS[k][t].push(r);
     });
@@ -208,7 +209,7 @@ function luuXepLoai(maHS, thang, xepLoai, ghiChu, nguoiNhap) {
 
     // Chưa có dòng nào cho HS/tháng này -> thêm mới
     const cfg = docCauHinh();
-    const ky = String(cfg.ThangHK1).split(',').map(Number).indexOf(Number(thang)) >= 0 ? 'HK1' : 'HK2';
+    const ky = hocKyTheoThang(thang, cfg);
     const row = objToRow(head, {
       MaHS: maHS, Thang: thang, HocKy: ky, SoLoiNho: 0, SoLanGhiSo: 0, SoLanHaBac: 0,
       LoiNhoTonKho: 0, DiemThiDua: 0, XepLoai: xepLoai, DeXuat: '',

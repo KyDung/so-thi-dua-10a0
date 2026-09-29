@@ -151,6 +151,32 @@ tbody tr:hover { background: var(--brand-soft); }
 details.qa { border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px; margin-bottom: 8px; background: var(--bg); }
 details.qa summary { cursor: pointer; font-weight: 550; }
 
+.week-grid { display: grid; gap: 10px; }
+.week-card {
+  border: 1px solid var(--line); border-radius: 10px; background: var(--bg);
+  padding: 12px;
+}
+.week-head {
+  display: flex; justify-content: space-between; gap: 12px; align-items: flex-start;
+  border-bottom: 1px solid var(--line); padding-bottom: 8px; margin-bottom: 10px;
+}
+.week-head h3 { margin: 0; font-size: 15px; }
+.week-head p { margin: 2px 0 0; color: var(--ink-mute); font-size: 12.5px; }
+.week-cols { display: grid; gap: 10px; }
+.week-cols h4 {
+  margin: 0 0 6px; font-size: 12.5px; color: var(--ink-mute);
+  text-transform: uppercase; letter-spacing: .3px;
+}
+.week-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.week-list li {
+  display: flex; justify-content: space-between; gap: 10px; align-items: flex-start;
+  padding: 7px 0; border-top: 1px dashed var(--line);
+}
+.week-list li:first-child { border-top: 0; padding-top: 0; }
+.week-list small { display: block; color: var(--ink-mute); margin-top: 1px; }
+.week-empty { color: var(--ink-mute); font-size: 13px; padding: 4px 0; }
+@media (min-width: 760px) { .week-cols { grid-template-columns: 1fr 1fr; } }
+
 .loading { text-align: center; padding: 40px; color: var(--ink-mute); }
 .loading::after { content: "…"; animation: dots 1.2s steps(4) infinite; }
 @keyframes dots { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75% { content: "..."; } }

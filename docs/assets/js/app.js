@@ -37,7 +37,9 @@ const diemHTML = function (d) {
 const vaiTro = function () { return Store.get('vaiTro'); };
 const hnay = function () { return new Date().toISOString().slice(0, 10); };
 const thangMacDinh = function () {
-  return (LOP && LOP.tuanHienTai && LOP.tuanHienTai.Thang) || (new Date().getMonth() + 1);
+  const thangMay = new Date().getMonth() + 1;
+  if (THANG_HOC.indexOf(thangMay) >= 0) return thangMay;
+  return (LOP && LOP.tuanHienTai && LOP.tuanHienTai.Thang) || THANG_HOC[0];
 };
 /** Đọc tham số sau dấu ? trong hash, ví dụ #/chi-tiet?ma=10A0_01 */
 const thamSo = function (ten) {
@@ -292,12 +294,56 @@ async function mhChiTiet() {
 
   const d = await API.chiTietHS(ma);
   if (luot !== lanHienThi) return;
-  const thangLoc = Number(thamSo('thang')) || 0;
+  const thangLoc = Number(thamSo('thang')) || thangMacDinh();
   const chiTiet = d.chiTiet.filter(function (r) { return !thangLoc || Number(r.thang) === thangLoc; });
+  const cacTuan = (d.tuan || []).filter(function (t) { return !thangLoc || Number(t.thang) === thangLoc; })
+    .sort(function (a, b) { return String(a.tuNgay).localeCompare(String(b.tuNgay)); });
+  const theoTuan = {};
+  chiTiet.forEach(function (r) {
+    if (!theoTuan[r.maTuan]) theoTuan[r.maTuan] = [];
+    theoTuan[r.maTuan].push(r);
+  });
   const h = d.hocSinh;
   const tongDiem = chiTiet.reduce(function (s, r) { return s + Number(r.diem || 0); }, 0);
   const soLoi = chiTiet.filter(function (r) { return r.loai === 'LOI'; }).length;
   const soCong = chiTiet.filter(function (r) { return r.loai === 'CONG'; }).length;
+  const tongHopThang = d.thang.filter(function (t) { return !thangLoc || Number(t.thang) === thangLoc; });
+
+  function mucTuan(items, loai) {
+    const ds = items.filter(function (r) { return r.loai === loai; });
+    if (!ds.length) return '<div class="week-empty">Không có</div>';
+    return '<ul class="week-list">' + ds.map(function (r) {
+      return '<li><span><strong>' + esc(r.ten) + '</strong>' +
+        (r.cot ? '<small>' + esc(r.cot) + '</small>' : '') +
+        (r.nhom === 'HA_BAC' ? ' <span class="badge DAT">hạ 1 bậc</span>' : '') +
+        (r.nhom === 'CHUA_DAT' ? ' <span class="badge CHUA_DAT">nghiêm trọng</span>' : '') +
+        '</span>' + diemHTML(r.diem) + '</li>';
+    }).join('') + '</ul>';
+  }
+
+  function theTuan(t) {
+    const items = (theoTuan[t.maTuan] || []).sort(function (a, b) { return Number(b.diem) - Number(a.diem); });
+    const diem = items.reduce(function (s, r) { return s + Number(r.diem || 0); }, 0);
+    return `<section class="week-card">
+      <div class="week-head">
+        <div>
+          <h3>Tuần ${esc(t.soTuan || t.maTuan)}</h3>
+          <p>${esc(t.tuNgay)} đến ${esc(t.denNgay)}</p>
+        </div>
+        ${diemHTML(diem)}
+      </div>
+      <div class="week-cols">
+        <div>
+          <h4>Điểm cộng</h4>
+          ${mucTuan(items, 'CONG')}
+        </div>
+        <div>
+          <h4>Điểm trừ</h4>
+          ${mucTuan(items, 'LOI')}
+        </div>
+      </div>
+    </section>`;
+  }
 
   el.innerHTML = `
     <div class="card">
@@ -307,9 +353,9 @@ async function mhChiTiet() {
           esc(x.hoTen) + '</option>';
       }).join('')}</select>
       <label class="f" for="iLocThang" style="margin-top:12px">Thời gian theo dõi</label>
-      <select id="iLocThang"><option value="0">Cả năm học</option>${THANG_HOC.map(function (t) {
+      <select id="iLocThang">${THANG_HOC.map(function (t) {
         return '<option value="' + t + '"' + (t === thangLoc ? ' selected' : '') + '>Tháng ' + t + '</option>';
-      }).join('')}</select>
+      }).join('')}<option value="0"${thangLoc ? '' : ' selected'}>Cả năm học</option></select>
     </div>
 
     <div class="card">
@@ -324,15 +370,22 @@ async function mhChiTiet() {
     </div>
 
     <div class="card">
-      <h2>Xếp loại từng tháng</h2>
-      ${d.thang.length ? `<div class="tbl-wrap"><table>
+      <h2>Theo từng tuần${thangLoc ? ' tháng ' + esc(thangLoc) : ''}</h2>
+      <p class="hint">Nội dung bên dưới là các mục được cán bộ lớp chép lại từ sổ chính theo từng tuần.</p>
+      ${cacTuan.length ? '<div class="week-grid">' + cacTuan.map(theTuan).join('') + '</div>'
+        : '<div class="empty">Chưa có lịch tuần cho tháng này.</div>'}
+    </div>
+
+    <div class="card">
+      <h2>Xếp loại ${thangLoc ? 'tháng ' + esc(thangLoc) : 'từng tháng'}</h2>
+      ${tongHopThang.length ? `<div class="tbl-wrap"><table>
         <thead><tr><th>Tháng</th><th>Xếp loại</th><th style="text-align:right">Điểm</th>
           <th style="text-align:right">Ghi sổ ĐB</th><th style="text-align:right">Hạ bậc</th>
           <th style="text-align:right">Lỗi nhỏ dư</th><th></th></tr></thead>
-        <tbody>${d.thang.map(function (t) {
+        <tbody>${tongHopThang.map(function (t) {
           return `<tr>
             <td><strong>Tháng ${esc(t.thang)}</strong></td>
-            <td><span class="badge ${esc(t.xepLoai)}">${esc(t.nhan)}</span></td>
+            <td>${t.xepLoai ? '<span class="badge ' + esc(t.xepLoai) + '">' + esc(t.nhan) + '</span>' : '<span style="color:var(--ink-mute);font-size:12.5px">chưa xếp</span>'}</td>
             <td style="text-align:right">${diemHTML(t.diemThiDua)}</td>
             <td style="text-align:right">${esc(t.soLanGhiSo || 0)}</td>
             <td style="text-align:right">${esc(t.soLanHaBac || 0)}</td>
@@ -346,23 +399,6 @@ async function mhChiTiet() {
           (k.xepLoai ? '<span class="badge ' + k.xepLoai + '">' + esc(k.nhan) + '</span>' : '—') +
           (k.daDuyet ? '' : ' <em>(dự kiến)</em>');
       }).join(' &nbsp;·&nbsp; ')}</p>` : ''}
-    </div>
-
-    <div class="card">
-      <h2>Chi tiết từng lượt</h2>
-      <p class="hint">Dữ liệu được chép theo tuần từ sổ chính, không xác định ngày xảy ra từng lượt.
-        Nếu thấy sai sót, báo lại cán bộ lớp hoặc giáo viên chủ nhiệm.</p>
-      ${chiTiet.length ? `<div class="tbl-wrap"><table>
-        <thead><tr><th>Tuần ghi nhận</th><th>Nội dung</th><th style="text-align:right">Điểm</th></tr></thead>
-        <tbody>${chiTiet.map(function (r) {
-          return `<tr>
-            <td>${r.soTuan ? 'Tuần ' + esc(r.soTuan) : esc(r.maTuan)}${r.tuNgay ? '<br><small>' + esc(r.tuNgay) + ' – ' + esc(r.denNgay) + '</small>' : ''}</td>
-            <td>${esc(r.ten)}${r.moTa ? ' <span style="color:var(--ink-mute)">— ' + esc(r.moTa) + '</span>' : ''}
-              ${r.nhom === 'HA_BAC' ? ' <span class="badge DAT">hạ 1 bậc</span>' : ''}
-              ${r.nhom === 'CHUA_DAT' ? ' <span class="badge CHUA_DAT">nghiêm trọng</span>' : ''}</td>
-            <td style="text-align:right">${diemHTML(r.diem)}</td>
-          </tr>`;
-        }).join('')}</tbody></table></div>` : '<div class="empty">Chưa có lượt nào được ghi nhận. 🎉</div>'}
     </div>`;
 
   q('#iHS').onchange = function () { location.hash = '#/chi-tiet?ma=' + encodeURIComponent(this.value) + '&thang=' + thangLoc; };
@@ -404,7 +440,7 @@ async function mhThiDua() {
 
   q('#iThang').onchange = function () { location.hash = '#/thi-dua?thang=' + this.value; };
   qa('tbody tr[data-ma]').forEach(function (tr) {
-    tr.onclick = function () { location.hash = '#/chi-tiet?ma=' + tr.dataset.ma; };
+    tr.onclick = function () { location.hash = '#/chi-tiet?ma=' + tr.dataset.ma + '&thang=' + thang; };
   });
 }
 
@@ -426,7 +462,8 @@ async function mhChamDiem() {
     throw new Error('Chức năng nhập đang chờ cập nhật. Nhờ người quản lý triển khai bản Apps Script mới rồi tải lại trang.');
   }
 
-  const oChonTuan = '<select id="iTuan" style="min-width:230px">' + LICHTUAN.map(function (t) {
+  const tuanHoc = LICHTUAN.filter(function (t) { return t.MaTuan; });
+  const oChonTuan = '<select id="iTuan" style="min-width:230px">' + tuanHoc.map(function (t) {
     return '<option value="' + esc(t.MaTuan) + '"' + (t.MaTuan === maTuan ? ' selected' : '') + '>' +
       'Tuần ' + esc(t.SoTuan) + ' — ' + esc(String(t.TuNgay).slice(8, 10) + '/' + String(t.TuNgay).slice(5, 7)) +
       ' đến ' + esc(String(t.DenNgay).slice(8, 10) + '/' + String(t.DenNgay).slice(5, 7)) + '</option>';
@@ -444,6 +481,10 @@ async function mhChamDiem() {
           <p class="hint" style="margin:0">Từ ${esc(d.tuan.tuNgay)} đến ${esc(d.tuan.denNgay)} ·
             ${d.daChot ? '<span class="badge DAT">tháng đã chốt, không sửa được</span>'
                        : 'Gõ mỗi lượt một mục, nhiều mục ngăn bằng dấu phẩy'}</p>
+          ${d.daChot ? '' : `<p class="hint" style="margin:6px 0 0">
+            <strong>Nhập sai thì sửa thế nào?</strong> Chọn lại đúng tuần đó ở ô bên phải —
+            các ô sẽ hiện nguyên nội dung đã lưu. Sửa chữ, xoá bớt mục rồi bấm
+            <em>Lưu thay đổi</em>. Muốn bỏ hẳn một lượt thì xoá đoạn chữ đó khỏi ô.</p>`}
         </div>
         <div>${oChonTuan}</div>
       </div>

@@ -117,8 +117,13 @@ function apiDanhMuc() {
 }
 
 function apiLichTuan() {
-  return docBang(SHEETS.TUAN).map(function (t) {
-    return Object.assign({}, t, { TuNgay: fmtNgay(t.TuNgay), DenNgay: fmtNgay(t.DenNgay) });
+  const cfg = docCauHinh();
+  return docBang(SHEETS.TUAN).filter(laTuanHoc).map(function (t) {
+    const thang = thangTheoDoiTuan(t);
+    return Object.assign({}, t, {
+      TuNgay: fmtNgay(t.TuNgay), DenNgay: fmtNgay(t.DenNgay),
+      Thang: thang, HocKy: hocKyTheoThang(thang, cfg)
+    });
   });
 }
 
@@ -128,22 +133,31 @@ function apiChiTietHS(maHS) {
   const hs = docBang(SHEETS.HS).filter(function (r) { return r.MaHS === maHS; })[0];
   if (!hs) throw new Error('Không tìm thấy học sinh');
 
-  const tuan = indexBy(docBang(SHEETS.TUAN), 'MaTuan');
+  const dsTuan = docBang(SHEETS.TUAN);
+  const tuan = indexBy(dsTuan, 'MaTuan');
+  const lichTuan = dsTuan.map(function (t) {
+    const thang = thangTheoDoiTuan(t);
+    return {
+      maTuan: t.MaTuan, soTuan: t.SoTuan, thang: thang,
+      tuNgay: fmtNgay(t.TuNgay), denNgay: fmtNgay(t.DenNgay)
+    };
+  });
   const chiTiet = docBang(SHEETS.NHATKY)
     .filter(function (r) { return r.MaHS === maHS && r.TrangThai === 'HOAT_DONG'; })
     .map(function (r) {
       const c = COT[r.Ma];
+      const t = tuan[r.MaTuan];
       return {
-        ngay: fmtNgay(r.Ngay), thang: r.Thang, maTuan: r.MaTuan, loai: r.Loai,
-        soTuan: tuan[r.MaTuan] ? tuan[r.MaTuan].SoTuan : '',
-        tuNgay: tuan[r.MaTuan] ? fmtNgay(tuan[r.MaTuan].TuNgay) : '',
-        denNgay: tuan[r.MaTuan] ? fmtNgay(tuan[r.MaTuan].DenNgay) : '',
+        ngay: fmtNgay(r.Ngay), thang: thangCuaNhatKy(r, tuan), maTuan: r.MaTuan, loai: r.Loai,
+        soTuan: t ? t.SoTuan : '',
+        tuNgay: t ? fmtNgay(t.TuNgay) : '',
+        denNgay: t ? fmtNgay(t.DenNgay) : '',
         ten: r.MoTa || (c ? c.ten : r.Ma),
         cot: c ? c.ten : '', nhom: c ? c.nhom : '',
         diem: Number(r.Diem) || 0, moTa: ''
       };
     })
-    .sort(function (a, b) { return a.ngay < b.ngay ? 1 : -1; });
+    .sort(function (a, b) { return a.tuNgay < b.tuNgay ? 1 : -1; });
 
   const thang = docBang(SHEETS.THANG)
     .filter(function (r) { return r.MaHS === maHS; })
@@ -160,7 +174,7 @@ function apiChiTietHS(maHS) {
       return { ky: r.Ky, xepLoai: r.XepLoai, nhan: NHAN[r.XepLoai] || '', daDuyet: String(r.DaDuyet).toUpperCase() === 'TRUE', ghiChu: r.GhiChu };
     });
 
-  return { hocSinh: { maHS: hs.MaHS, hoTen: hs.HoTen, to: hs.To, chucVu: hs.ChucVu }, chiTiet: chiTiet, thang: thang, ky: ky };
+  return { hocSinh: { maHS: hs.MaHS, hoTen: hs.HoTen, to: hs.To, chucVu: hs.ChucVu }, chiTiet: chiTiet, tuan: lichTuan, thang: thang, ky: ky };
 }
 
 // =============== ĐĂNG NHẬP ===============
@@ -254,6 +268,7 @@ function apiLuoiTuan(phien, maTuan) {
 
   const tuan = docBang(SHEETS.TUAN).filter(function (r) { return r.MaTuan === maTuan; })[0];
   if (!tuan) throw new Error('Không có tuần ' + maTuan + ' trong lịch');
+  const thangTuan = thangTheoDoiTuan(tuan);
 
   const daChot = {};
   docBang(SHEETS.THANG).forEach(function (r) {
@@ -284,7 +299,7 @@ function apiLuoiTuan(phien, maTuan) {
   const diemCoSan = Number(cfg.DiemCoSan);
   return {
     tuan: {
-      maTuan: tuan.MaTuan, soTuan: tuan.SoTuan, thang: tuan.Thang,
+      maTuan: tuan.MaTuan, soTuan: tuan.SoTuan, thang: thangTuan,
       tuNgay: fmtNgay(tuan.TuNgay), denNgay: fmtNgay(tuan.DenNgay)
     },
     cot: Object.keys(COT).map(function (k) {
@@ -293,7 +308,7 @@ function apiLuoiTuan(phien, maTuan) {
     dong: dong,
     tongHS: dong.reduce(function (a, b) { return a + b.tong; }, 0),
     diemCoSan: isNaN(diemCoSan) ? 0 : diemCoSan,
-    daChot: !!daChot[(hs[0] || {}).MaHS + '|' + tuan.Thang]
+    daChot: !!daChot[(hs[0] || {}).MaHS + '|' + thangTuan]
   };
 }
 
@@ -314,8 +329,10 @@ function apiLuuLuoiTuan(phien, maTuan, dong) {
     const hs = indexBy(docBang(SHEETS.HS), 'MaHS');
     const nhatKy = docBang(SHEETS.NHATKY);
 
-    const tuan = docBang(SHEETS.TUAN).filter(function (r) { return r.MaTuan === maTuan; })[0];
-    if (!tuan) throw new Error('Không có tuần ' + maTuan + ' trong lịch');
+    const tuan = docBang(SHEETS.TUAN).filter(function (r) { return laTuanHoc(r) && r.MaTuan === maTuan; })[0];
+    if (!tuan) throw new Error('Không có tuần ' + maTuan + ' trong lịch (có thể là tuần nghỉ)');
+    const thangTuan = thangTheoDoiTuan(tuan);
+    const hocKyTuan = hocKyTheoThang(thangTuan, cfg);
 
     const daChot = {};
     docBang(SHEETS.THANG).forEach(function (r) {
@@ -338,8 +355,8 @@ function apiLuuLuoiTuan(phien, maTuan, dong) {
       if (phien.vaiTro === 'TO_TRUONG' && phien.to && h.To !== phien.to) {
         throw new Error('Bạn chỉ được ghi cho học sinh trong ' + phien.to);
       }
-      if (daChot[d.maHS + '|' + tuan.Thang]) {
-        throw new Error('Tháng ' + tuan.Thang + ' đã chốt, không sửa được');
+      if (daChot[d.maHS + '|' + thangTuan]) {
+        throw new Error('Tháng ' + thangTuan + ' đã chốt, không sửa được');
       }
       trongPhamVi[d.maHS] = true;
     });
@@ -365,7 +382,7 @@ function apiLuuLuoiTuan(phien, maTuan, dong) {
       Object.keys(COT).forEach(function (k) {
         tachMuc(d.o ? d.o[k] : '').forEach(function (muc) {
           rows.push([
-            Utilities.getUuid(), d.maHS, ngay, maTuan, tuan.Thang, tuan.HocKy,
+            Utilities.getUuid(), d.maHS, ngay, maTuan, thangTuan, hocKyTuan,
             k === 'CONG' ? 'CONG' : 'LOI', k, diem6[k], muc,
             phien.ten, new Date(), 'HOAT_DONG'
           ]);
@@ -426,7 +443,11 @@ function xoaNhatKyDuLieu(phien, id) {
   for (let i = 0; i < vals.length; i++) {
     if (vals[i][iId] !== id) continue;
     const maHS = vals[i][head.indexOf('MaHS')];
-    const thang = vals[i][head.indexOf('Thang')];
+    const tuan = indexBy(docBang(SHEETS.TUAN), 'MaTuan');
+    const thang = thangCuaNhatKy({
+      MaTuan: vals[i][head.indexOf('MaTuan')],
+      Thang: vals[i][head.indexOf('Thang')]
+    }, tuan);
     const h = docBang(SHEETS.HS).filter(function (r) { return r.MaHS === maHS; })[0];
     if (phien.vaiTro === 'TO_TRUONG' && (!h || h.To !== phien.to)) {
       throw new Error('Bạn chỉ được ghi cho học sinh trong ' + phien.to);
@@ -505,6 +526,7 @@ function apiXuatExcel(phien) {
 
   const bangThang = {};
   docBang(SHEETS.THANG).forEach(function (r) { bangThang[r.MaHS + '|' + r.Thang] = r; });
+  const tuan = indexBy(docBang(SHEETS.TUAN), 'MaTuan');
   const nhatky = docBang(SHEETS.NHATKY).filter(function (r) { return r.TrangThai === 'HOAT_DONG'; });
   const bangKy = {};
   docBang(SHEETS.KY).forEach(function (r) { bangKy[r.MaHS + '|' + r.Ky] = r.XepLoai; });
@@ -522,7 +544,7 @@ function apiXuatExcel(phien) {
 
     const rows = hs.map(function (h, i) {
       const dsLoi = nhatky.filter(function (r) {
-        return r.MaHS === h.MaHS && Number(r.Thang) === thang && r.Loai === 'LOI';
+        return r.MaHS === h.MaHS && thangCuaNhatKy(r, tuan) === thang && r.Loai === 'LOI';
       }).map(function (r) {
         const d = new Date(r.Ngay);
         const c = COT[r.Ma];

@@ -20,7 +20,7 @@ const SCHEMA = {
   HocSinh: ['MaHS', 'HoTen', 'To', 'ChucVu', 'TrangThai', 'GhiChu'],
   DanhMucLoi: ['MaLoi', 'TenLoi', 'Nhom', 'PhamVi', 'DiemTru', 'NguongHocKy', 'HienThi', 'GhiChu'],
   DanhMucCong: ['MaCong', 'TenCong', 'DiemCong', 'CanMon', 'TranTuan', 'HienThi'],
-  TuanHoc: ['MaTuan', 'SoTuan', 'TuNgay', 'DenNgay', 'Thang', 'HocKy'],
+  TuanHoc: ['MaTuan', 'SoTuan', 'TuNgay', 'DenNgay', 'Thang', 'HocKy', 'NghiHoc', 'GhiChu'],
   NhatKy: ['Id', 'MaHS', 'Ngay', 'MaTuan', 'Thang', 'HocKy', 'Loai', 'Ma', 'Diem', 'MoTa', 'NguoiNhap', 'ThoiGian', 'TrangThai'],
   XepLoaiThang: ['MaHS', 'Thang', 'HocKy', 'SoLoiNho', 'SoLanGhiSo', 'SoLanHaBac', 'LoiNhoTonKho', 'DiemThiDua', 'XepLoai', 'DeXuat', 'NguoiNhap', 'DaChot', 'NguoiChot', 'ThoiGianChot', 'GhiChu'],
   XepLoaiKy: ['MaHS', 'Ky', 'XepLoai', 'DeXuat', 'DaDuyet', 'GhiChu'],
@@ -135,6 +135,7 @@ function onOpen() {
     .addItem('Khởi tạo database', 'khoiTaoDatabase')
     .addItem('Sinh mã học sinh', 'sinhMaHS')
     .addItem('Sinh lại lịch tuần', 'sinhLichTuan')
+    .addItem('Đánh số lại tuần học (sau khi tích tuần nghỉ)', 'danhSoLaiTuan')
     .addItem('Tính lại số liệu tất cả các tháng', 'tinhLaiTatCa')
     .addSeparator()
     .addItem('👤 Áp dụng tài khoản (sau khi thêm/đổi mật khẩu)', 'apDungTaiKhoan')
@@ -333,33 +334,115 @@ function xemTaiKhoan() {
   SpreadsheetApp.getUi().alert('Tài khoản hiện có', out, SpreadsheetApp.getUi().ButtonSet.OK);
 }
 
-/** Sinh lịch tuần từ ngày bắt đầu năm học đến hết tháng 5. Tuần bắt đầu thứ Hai. */
+/**
+ * Sinh lịch tuần từ đầu năm học đến hết tháng 5. Tuần bắt đầu thứ Hai.
+ *
+ * Chạy lại được nhiều lần: các tuần đã đánh dấu NGHỈ và ghi chú sẽ được giữ nguyên
+ * (khớp theo ngày bắt đầu tuần), nên cô đánh dấu nghỉ Tết một lần là xong.
+ */
 function sinhLichTuan() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sh = ss.getSheetByName(SHEETS.TUAN);
-  if (sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, SCHEMA.TuanHoc.length).clearContent();
-  sh.getRange('C2:D200').setNumberFormat('@');
+  const head = SCHEMA.TuanHoc;
+
+  // Nhớ lại các tuần đã đánh dấu nghỉ trước khi xoá
+  const nghiCu = {};
+  if (sh.getLastRow() > 1) {
+    const cu = sh.getRange(2, 1, sh.getLastRow() - 1, head.length).getValues();
+    const iTu = head.indexOf('TuNgay'), iNghi = head.indexOf('NghiHoc'), iGC = head.indexOf('GhiChu');
+    cu.forEach(function (r) {
+      const k = fmtNgay(r[iTu]);
+      if (k) nghiCu[k] = { nghi: r[iNghi] === true || String(r[iNghi]).toUpperCase() === 'TRUE',
+                           ghiChu: r[iGC] || '' };
+    });
+    sh.getRange(2, 1, sh.getLastRow() - 1, head.length).clearContent();
+  }
+
+  sh.getRange('C2:D300').setNumberFormat('@');
 
   const cfg = docCauHinh();
   const batDau = ngayTu(cfg.NgayBatDauNamHoc);
   const thu2 = new Date(batDau);
   thu2.setDate(thu2.getDate() - ((thu2.getDay() + 6) % 7));   // lùi về thứ Hai
 
-  const hk1 = String(cfg.ThangHK1).split(',').map(Number);
   const rows = [];
-  for (let i = 0; i < 40; i++) {
+  for (let i = 0; i < 46; i++) {
     const tu = new Date(thu2); tu.setDate(tu.getDate() + i * 7);
     const den = new Date(tu); den.setDate(den.getDate() + 6);
-    const thang = den.getMonth() + 1;          // tuần thuộc tháng chứa ngày CUỐI tuần
-    if (thang === 6 || thang === 7 || thang === 8) continue;
+    const thang = thangTheoDoiTuan({ TuNgay: fmt(tu), DenNgay: fmt(den) });
+    if (thang === 6 || thang === 7 || thang === 8) continue;   // nghỉ hè
+    const cu = nghiCu[fmt(tu)] || {};
     rows.push([
-      'T' + String(i + 1).padStart(2, '0'),
-      i + 1,
-      fmt(tu), fmt(den), thang,
-      hk1.indexOf(thang) >= 0 ? 'HK1' : 'HK2'
+      '', 0, fmt(tu), fmt(den), thang, hocKyTheoThang(thang, cfg),
+      cu.nghi === true, cu.ghiChu || ''
     ]);
   }
-  sh.getRange(2, 1, rows.length, SCHEMA.TuanHoc.length).setValues(rows);
+  sh.getRange(2, 1, rows.length, head.length).setValues(rows);
+  trangTriTuanHoc(sh, rows.length);
+  danhSoLaiTuan();
+}
+
+/** Ô tích cho cột NghiHoc + ghi chú hướng dẫn ngay trên sheet. */
+function trangTriTuanHoc(sh, soDong) {
+  const head = SCHEMA.TuanHoc;
+  const cNghi = head.indexOf('NghiHoc') + 1;
+  sh.getRange(2, cNghi, Math.max(soDong, 1), 1)
+    .setDataValidation(SpreadsheetApp.newDataValidation().requireCheckbox().build());
+  sh.getRange(1, cNghi).setNote(
+    'Tích vào tuần KHÔNG đi học (nghỉ Tết, nghỉ lễ dài...).\n' +
+    'Tuần đã tích sẽ không được đánh số và không hiện khi ghi sổ.\n' +
+    'Tích xong bấm menu ⚙️ Thi đua → "Đánh số lại tuần học".');
+  sh.getRange(1, head.indexOf('GhiChu') + 1).setNote('Ví dụ: Nghỉ Tết Nguyên đán');
+  sh.setColumnWidth(head.indexOf('GhiChu') + 1, 220);
+}
+
+/**
+ * Đánh số lại tuần học: chỉ đếm những tuần KHÔNG bị tích nghỉ.
+ * Tuần nghỉ để trống số và mã, nhưng vẫn giữ dòng để biết đã nghỉ khoảng nào.
+ */
+function danhSoLaiTuan() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sh = ss.getSheetByName(SHEETS.TUAN);
+  const head = SCHEMA.TuanHoc;
+  const n = sh.getLastRow() - 1;
+  if (n <= 0) return 0;
+
+  const iMa = head.indexOf('MaTuan'), iSo = head.indexOf('SoTuan');
+  const iNghi = head.indexOf('NghiHoc'), iThang = head.indexOf('Thang');
+  const iHK = head.indexOf('HocKy');
+  const cfg = docCauHinh();
+
+  const vals = sh.getRange(2, 1, n, head.length).getValues();
+  let dem = 0, soNghi = 0;
+  vals.forEach(function (r) {
+    if (!r[head.indexOf('TuNgay')]) return;
+    const nghi = r[iNghi] === true || String(r[iNghi]).toUpperCase() === 'TRUE';
+    // Tháng/học kỳ tính lại cho chắc, phòng khi cô sửa ngày bằng tay
+    r[iThang] = thangTheoDoiTuan({ TuNgay: r[head.indexOf('TuNgay')], DenNgay: r[head.indexOf('DenNgay')] });
+    r[iHK] = hocKyTheoThang(r[iThang], cfg);
+    if (nghi) {
+      r[iMa] = ''; r[iSo] = ''; soNghi++;
+    } else {
+      dem++;
+      r[iMa] = 'T' + String(dem).padStart(2, '0');
+      r[iSo] = dem;
+    }
+  });
+  sh.getRange(2, 1, n, head.length).setValues(vals);
+  trangTriTuanHoc(sh, n);
+
+  try {
+    SpreadsheetApp.getUi().alert('Đánh số lại tuần học',
+      'Tổng số tuần học: ' + dem + '\n' +
+      'Số tuần nghỉ đã bỏ qua: ' + soNghi + '\n\n' +
+      (soNghi === 0
+        ? 'Chưa đánh dấu tuần nghỉ nào. Tích vào cột "NghiHoc" của các tuần nghỉ Tết, nghỉ lễ rồi chạy lại.'
+        : 'Các tuần nghỉ không được đánh số và sẽ không hiện khi ghi sổ.'),
+      SpreadsheetApp.getUi().ButtonSet.OK);
+  } catch (e) { /* chạy tự động từ sinhLichTuan thì không có UI */ }
+
+  ghiLog('HE_THONG', 'DANH_SO_TUAN', dem + ' tuần học, ' + soNghi + ' tuần nghỉ');
+  return dem;
 }
 
 /**
