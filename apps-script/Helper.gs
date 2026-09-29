@@ -50,6 +50,26 @@ function tuanCuaNgay(d) {
   return null;
 }
 
+/**
+ * Đọc một giá trị ngày từ Sheet về Date.
+ *
+ * Google Sheets tự đổi ô kiểu "2026-09-05" thành Date, nên cùng một ô lúc thì là
+ * chuỗi lúc thì là Date. Hàm này nhận cả hai. Đặt giờ 12h trưa để không bị lệch
+ * ngày khi đổi múi giờ.
+ */
+function ngayTu(v) {
+  if (v instanceof Date) {
+    if (isNaN(v.getTime())) throw new Error('Ngày không hợp lệ trong CauHinh');
+    return new Date(v.getFullYear(), v.getMonth(), v.getDate(), 12, 0, 0);
+  }
+  const s = String(v).trim().slice(0, 10);
+  const m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12, 0, 0);
+  const d = new Date(s);
+  if (!isNaN(d.getTime())) return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0);
+  throw new Error('Không đọc được ngày: "' + v + '". Cần dạng yyyy-MM-dd.');
+}
+
 function fmtNgay(d) {
   if (!d) return '';
   if (typeof d === 'string') return d.slice(0, 10);

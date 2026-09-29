@@ -1,13 +1,51 @@
 /**
  * api.js — Lớp gọi Apps Script.
  *
- * GET dùng JSONP vì Apps Script không trả header CORS cho request thường.
- * POST dùng Content-Type: text/plain để trình duyệt không gửi preflight OPTIONS
- * (Apps Script không xử lý được OPTIONS).
+ * GET: dùng fetch bình thường. Apps Script có gửi `Access-Control-Allow-Origin: *`
+ *      trên cả redirect lẫn phản hồi cuối nên không vướng CORS.
+ *      Nếu fetch bị chặn (tiện ích chặn quảng cáo, mạng lọc...) thì quay về JSONP.
+ * POST: Content-Type text/plain để trình duyệt không gửi preflight OPTIONS
+ *       (Apps Script không xử lý được OPTIONS).
  */
 
 const API = (function () {
   let demJsonp = 0;
+
+  /** Lỗi do máy chủ trả về (sai mã, không đủ quyền...) — không thử lại bằng cách khác. */
+  function loiNghiepVu(msg) {
+    const e = new Error(msg);
+    e.tuMayChu = true;
+    return e;
+  }
+
+  function kiemTraCauHinh() {
+    if (!CONFIG.API_URL || CONFIG.API_URL.indexOf('PASTE') >= 0) {
+      throw new Error('Chưa cấu hình API_URL trong docs/assets/js/config.js');
+    }
+  }
+
+  function chuoiTruyVan(params) {
+    return Object.keys(params)
+      .map(function (k) { return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]); })
+      .join('&');
+  }
+
+  /** Gọi GET. Thử fetch trước, hỏng thì quay về JSONP. */
+  async function get(params) {
+    kiemTraCauHinh();
+    try {
+      const res = await fetch(CONFIG.API_URL + '?' + chuoiTruyVan(params), {
+        method: 'GET', redirect: 'follow'
+      });
+      if (!res.ok) throw new Error('Máy chủ trả về HTTP ' + res.status);
+      const kq = await res.json();
+      if (!kq.ok) throw loiNghiepVu(kq.error || 'Lỗi không xác định');
+      return kq.data;
+    } catch (e) {
+      if (e.tuMayChu) throw e;
+      return jsonp(params);   // fetch bị chặn -> thử cách cũ
+    }
+  }
 
   function jsonp(params) {
     return new Promise(function (resolve, reject) {
@@ -34,25 +72,32 @@ const API = (function () {
         else reject(new Error((kq && kq.error) || 'Lỗi không xác định'));
       };
 
-      const q = Object.keys(params)
-        .map(function (k) { return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]); })
-        .join('&');
-      s.src = CONFIG.API_URL + '?callback=' + cb + '&' + q;
-      s.onerror = function () { dọn(); reject(new Error('Không kết nối được máy chủ')); };
+      s.src = CONFIG.API_URL + '?callback=' + cb + '&' + chuoiTruyVan(params);
+      s.onerror = function () {
+        dọn();
+        reject(new Error('Không gọi được Apps Script. Thường do tiện ích chặn quảng cáo ' +
+          'hoặc mạng của trường chặn script.google.com — thử tắt tiện ích, hoặc mở bằng 4G.'));
+      };
       document.head.appendChild(s);
     });
   }
 
   async function post(body) {
-    if (!CONFIG.API_URL || CONFIG.API_URL.indexOf('PASTE') >= 0) {
-      throw new Error('Chưa cấu hình API_URL trong docs/assets/js/config.js');
-    }
+    kiemTraCauHinh();
     const token = Store.get('token');
-    const res = await fetch(CONFIG.API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(Object.assign({ token: token }, body))
-    });
+    let res;
+    try {
+      res = await fetch(CONFIG.API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(Object.assign({ token: token }, body)),
+        redirect: 'follow'
+      });
+    } catch (e) {
+      throw new Error('Không gửi được dữ liệu lên máy chủ. Kiểm tra mạng, ' +
+        'hoặc tiện ích chặn quảng cáo đang chặn script.google.com.');
+    }
+    if (!res.ok) throw new Error('Máy chủ trả về HTTP ' + res.status);
     const kq = await res.json();
     if (!kq.ok) throw new Error(kq.error || 'Lỗi không xác định');
     return kq.data;
@@ -60,13 +105,13 @@ const API = (function () {
 
   return {
     // ---- Ai cũng xem được (GET/JSONP, không cần đăng nhập) ----
-    thongTinLop: function () { return jsonp({ action: 'thongTinLop' }); },
-    danhMuc: function () { return jsonp({ action: 'danhMuc' }); },
-    lichTuan: function () { return jsonp({ action: 'lichTuan' }); },
-    dsHocSinh: function () { return jsonp({ action: 'dsHocSinh' }); },
-    bangLop: function (thang) { return jsonp({ action: 'bangLop', thang: thang }); },
-    chiTietHS: function (maHS) { return jsonp({ action: 'chiTietHS', maHS: maHS }); },
-    bangXepHangTo: function (maTuan) { return jsonp({ action: 'bangXepHangTo', maTuan: maTuan || '' }); },
+    thongTinLop: function () { return get({ action: 'thongTinLop' }); },
+    danhMuc: function () { return get({ action: 'danhMuc' }); },
+    lichTuan: function () { return get({ action: 'lichTuan' }); },
+    dsHocSinh: function () { return get({ action: 'dsHocSinh' }); },
+    bangLop: function (thang) { return get({ action: 'bangLop', thang: thang }); },
+    chiTietHS: function (maHS) { return get({ action: 'chiTietHS', maHS: maHS }); },
+    bangXepHangTo: function (maTuan) { return get({ action: 'bangXepHangTo', maTuan: maTuan || '' }); },
 
     // ---- Cần đăng nhập: nhập liệu (POST) ----
     dangNhap: function (u, p) { return post({ action: 'dangNhap', tenDangNhap: u, matKhau: p }); },

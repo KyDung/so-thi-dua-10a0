@@ -150,6 +150,12 @@ function khoiTaoDatabase() {
     }
   });
 
+  // Ép cột giá trị/ngày về dạng văn bản, nếu không Sheets tự đổi "2026-09-05"
+  // thành kiểu Ngày và code đọc ra sai.
+  ss.getSheetByName(SHEETS.CFG).getRange('B2:B200').setNumberFormat('@');
+  ss.getSheetByName(SHEETS.TUAN).getRange('C2:D200').setNumberFormat('@');
+  ss.getSheetByName(SHEETS.NHATKY).getRange('C2:C5000').setNumberFormat('@');
+
   seed(ss, SHEETS.CFG, DS_CAUHINH, 'Khoa');
   seed(ss, SHEETS.LOI, DS_LOI, 'MaLoi');
   seed(ss, SHEETS.CONG, DS_CONG, 'MaCong');
@@ -323,9 +329,10 @@ function sinhLichTuan() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sh = ss.getSheetByName(SHEETS.TUAN);
   if (sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, SCHEMA.TuanHoc.length).clearContent();
+  sh.getRange('C2:D200').setNumberFormat('@');
 
   const cfg = docCauHinh();
-  const batDau = new Date(cfg.NgayBatDauNamHoc + 'T00:00:00+07:00');
+  const batDau = ngayTu(cfg.NgayBatDauNamHoc);
   const thu2 = new Date(batDau);
   thu2.setDate(thu2.getDate() - ((thu2.getDay() + 6) % 7));   // lùi về thứ Hai
 
