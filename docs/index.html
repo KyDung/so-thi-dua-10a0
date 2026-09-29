@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sổ theo dõi thi đua</title>
+<meta name="description" content="Trang theo dõi thi đua và kết quả rèn luyện của lớp, dành cho học sinh, phụ huynh và cán bộ lớp.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏅</text></svg>">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="top-row">
+    <div>
+      <h1 id="tieuDe">Sổ theo dõi thi đua</h1>
+      <div class="sub" id="phuDe">Đang tải…</div>
+    </div>
+    <div class="spacer"></div>
+    <button id="btnPhien" class="sm">Đăng nhập</button>
+  </div>
+  <nav class="tabs">
+    <a href="#/bang-lop" class="on">Bảng lớp</a>
+    <a href="#/chi-tiet">Chi tiết học sinh</a>
+    <a href="#/thi-dua">Xếp hạng thi đua</a>
+    <a href="#/cham-diem" data-canQuyen style="display:none">Chấm điểm</a>
+    <a href="#/quan-tri" data-gvcn style="display:none">Quản trị</a>
+  </nav>
+</header>
+
+<main>
+  <div id="bangLoi" class="msg err" style="display:none"></div>
+  <div id="noiDung"><div class="loading">Đang tải</div></div>
+</main>
+
+<div class="foot">
+  Sổ điện tử theo dõi thi đua và kết quả rèn luyện của lớp.<br>
+  Kết quả hiển thị là tạm tính cho đến khi giáo viên chủ nhiệm chốt tháng.
+</div>
+
+<script src="assets/js/config.js"></script>
+<script src="assets/js/api.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

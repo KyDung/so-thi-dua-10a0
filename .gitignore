@@ -1,0 +1,26 @@
+# ============================================================
+# QUAN TRỌNG VỀ QUYỀN RIÊNG TƯ
+#
+# GitHub Pages miễn phí chỉ chạy trên repo CÔNG KHAI, nghĩa là
+# mọi file trong repo này đều đọc được từ Internet.
+#
+# Vì vậy KHÔNG đẩy lên: danh sách học sinh thật, mã PIN,
+# file Excel gốc của trường, ảnh chụp sổ theo dõi.
+# Những thứ đó chỉ nằm trong Google Sheet riêng tư.
+# ============================================================
+
+du-lieu-goc/
+*.xlsx
+*.xls
+danh-sach-*.csv
+danh-sach-*.txt
+pin-*.txt
+
+# Hệ điều hành / editor
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+.idea/
+*.swp
+node_modules/
