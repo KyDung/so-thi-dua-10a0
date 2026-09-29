@@ -1,4 +1,4 @@
-`/**
+/**
  * Setup.gs — Khởi tạo Google Sheet làm database.
  * Chạy MỘT LẦN: mở menu "⚙️ Thi đua" → "Khởi tạo database".
  */
@@ -479,4 +479,3 @@ function hashMK(mk) {
 function fmt(d) {
   return Utilities.formatDate(d, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
 }
-`;
