@@ -76,7 +76,7 @@ Google Sheet "DB-ThiDua-10A0"   ← một file duy nhất, dùng cả năm
 ├── HocSinh        41 dòng, cố định cả năm
 ├── DanhMucLoi     34 dòng, cố định cả năm
 ├── DanhMucCong    8 dòng
-├── TuanHoc        lịch tuần cả năm
+├── TuanHoc        các trang tuần do cán bộ lớp tạo
 ├── TaiKhoan       tài khoản đăng nhập
 ├── CauHinh        các thiết lập
 ├── NhatKy         ⟵ MỖI LƯỢT VI PHẠM / ĐIỂM CỘNG LÀ 1 DÒNG, có cột Thang
@@ -115,6 +115,7 @@ không ảnh hưởng gì đến dữ liệu gốc.
 
 | Khi nào | Ai | Làm gì |
 |---|---|---|
+| Đầu mỗi tuần | Lớp trưởng / cô | Web → *Sổ thi đua* → **+ Trang tuần mới** → điền tuần mấy, từ ngày đến ngày |
 | Khi chép sổ | Tổ trưởng / lớp trưởng | Web → *Sổ thi đua* → chọn tuần → gõ các mục vào cột cộng/trừ → *Lưu thay đổi* |
 | Cuối tháng | Lớp trưởng hoặc cô | Web → *Bảng lớp* → chọn xếp loại từng bạn → Lưu xếp loại |
 | Sau khi rà xong | Cô | Web → *Quản trị* → **Chốt tháng** (khoá lại, cán bộ lớp hết sửa được) |
@@ -124,19 +125,47 @@ Phụ huynh không phải làm gì — mở link là xem được.
 
 ---
 
+## 3b. Trang tuần — tạo tay như mở trang sổ giấy
+
+Web **không tự sinh lịch tuần**. Mỗi tuần, lớp trưởng (hoặc cô) vào tab *Sổ thi đua* bấm
+**+ Trang tuần mới**, điền:
+
+| Ô | Điền gì |
+|---|---|
+| Tuần thứ | 1, 2, 3… theo cách đánh số của trường |
+| Từ ngày / Đến ngày | Khoảng ngày của tuần đó |
+| Ghi chú | Không bắt buộc, ví dụ "tuần sau nghỉ Tết" |
+
+Web đoán sẵn tuần kế tiếp và khoảng ngày, thường chỉ cần bấm **Tạo trang**.
+
+**Tuần nghỉ Tết, nghỉ lễ thì không cần làm gì** — cứ bỏ qua, không tạo trang cho tuần đó.
+Tuần sau đi học lại thì tạo trang tiếp, số tuần vẫn liền mạch.
+
+Vào web sẽ **luôn mở sẵn trang tuần mới nhất**.
+
+Sửa nhầm số tuần hay khoảng ngày thì bấm **Sửa**. Tạo nhầm hẳn một trang thì bấm
+**Xoá trang** (chỉ xoá được khi trang đó chưa ghi mục nào).
+
+Hệ thống tự chặn: trùng số tuần, trùng ngày bắt đầu, hai trang chồng ngày lên nhau.
+
+---
+
 ## 4. Sang năm học mới
 
 Menu **⚙️ Thi đua → 📅 Bắt đầu năm học mới**.
 
 Script sẽ:
 1. **Sao lưu** toàn bộ file hiện tại thành `LUU TRU 10A0-K67 2026-2027` (giữ nguyên, không mất gì)
-2. Dọn sạch `NhatKy`, `XepLoaiThang`, `XepLoaiKy`, `Log` trong file đang dùng
-3. Cập nhật năm học và sinh lại lịch tuần
+2. Dọn sạch `TuanHoc`, `NhatKy`, `XepLoaiThang`, `XepLoaiKy`, `Log` trong file đang dùng
+3. Cập nhật năm học
 
 **Giữ nguyên**: danh mục lỗi, danh mục điểm cộng, tài khoản, cấu hình.
 
-Sau đó cô chỉ cần cập nhật sheet `HocSinh` nếu danh sách lớp thay đổi. Link web **không đổi**,
-không phải deploy lại gì cả.
+Sau đó:
+1. Cập nhật sheet `HocSinh` nếu danh sách lớp thay đổi
+2. Vào web tab *Sổ thi đua* → **+ Trang tuần mới** → tạo tuần 1 của năm học mới
+
+Link web **không đổi**, không phải deploy lại gì cả.
 
 > Script hỏi xác nhận bằng cách bắt gõ đúng năm học mới (ví dụ `2027-2028`) trước khi xoá.
 

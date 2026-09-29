@@ -53,6 +53,9 @@ function xuLy(action, p, phien) {
     case 'dangNhap':      return apiDangNhap(p.tenDangNhap, p.matKhau);
     case 'luoiTuan':      return apiLuoiTuan(canQuyen(phien, ['TO_TRUONG', 'LOP_TRUONG', 'GVCN']), p.maTuan);
     case 'luuLuoiTuan':   return apiLuuLuoiTuan(canQuyen(phien, ['TO_TRUONG', 'LOP_TRUONG', 'GVCN']), p.maTuan, p.dong);
+    case 'taoTuan':       return apiTaoTuan(canQuyen(phien, ['LOP_TRUONG', 'GVCN']), p.tuan);
+    case 'suaTuan':       return apiSuaTuan(canQuyen(phien, ['LOP_TRUONG', 'GVCN']), p.maTuan, p.tuan);
+    case 'xoaTuan':       return apiXoaTuan(canQuyen(phien, ['LOP_TRUONG', 'GVCN']), p.maTuan);
     case 'xoaNhatKy':     return apiXoaNhatKy(canQuyen(phien, ['TO_TRUONG', 'LOP_TRUONG', 'GVCN']), p.id);
     case 'luuXepLoai':    return apiLuuXepLoai(canQuyen(phien, ['LOP_TRUONG', 'GVCN']), p.items);
 
@@ -78,7 +81,7 @@ function apiThongTinLop() {
     siSo: hs.length,
     to: Object.keys(to).sort().map(function (k) { return { ten: k, siSo: to[k] }; }),
     congKhaiBangLop: String(cfg.CongKhaiBangLop).toUpperCase() === 'TRUE',
-    tuanHienTai: tuanCuaNgay(new Date())
+    tuanHienTai: tuanMoiNhat()
   };
 }
 
@@ -118,7 +121,7 @@ function apiDanhMuc() {
 
 function apiLichTuan() {
   const cfg = docCauHinh();
-  return docBang(SHEETS.TUAN).filter(laTuanHoc).map(function (t) {
+  return docBang(SHEETS.TUAN).map(function (t) {
     const thang = thangTheoDoiTuan(t);
     return Object.assign({}, t, {
       TuNgay: fmtNgay(t.TuNgay), DenNgay: fmtNgay(t.DenNgay),
@@ -254,6 +257,147 @@ function apiDsHocSinh(phien) {
 
 
 /**
+ * Trang tuần mới nhất (theo ngày bắt đầu). Web mở lên là vào thẳng tuần này.
+ */
+function tuanMoiNhat() {
+  const ds = docBang(SHEETS.TUAN).filter(function (t) { return t.MaTuan; });
+  if (!ds.length) return null;
+  ds.sort(function (a, b) { return fmtNgay(a.TuNgay) < fmtNgay(b.TuNgay) ? 1 : -1; });
+  const t = ds[0];
+  return {
+    MaTuan: t.MaTuan, SoTuan: t.SoTuan,
+    TuNgay: fmtNgay(t.TuNgay), DenNgay: fmtNgay(t.DenNgay),
+    Thang: thangTheoDoiTuan(t), HocKy: t.HocKy
+  };
+}
+
+/**
+ * Tạo một trang tuần mới — giống mở trang mới trong sổ giấy.
+ * Cán bộ lớp tự điền tuần mấy, từ ngày đến ngày. Tuần nghỉ thì không tạo.
+ */
+function apiTaoTuan(phien, t) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const soTuan = Number(t && t.soTuan);
+    if (!soTuan || soTuan < 1 || soTuan > 60) throw new Error('Số tuần phải từ 1 đến 60');
+
+    const tu = ngayTu(t.tuNgay), den = ngayTu(t.denNgay);
+    const sTu = fmtNgay(tu), sDen = fmtNgay(den);
+    if (sDen < sTu) throw new Error('Ngày kết thúc phải sau ngày bắt đầu');
+    if ((den - tu) / 86400000 > 13) throw new Error('Một trang tuần không quá 14 ngày');
+
+    const ds = docBang(SHEETS.TUAN);
+    if (ds.some(function (r) { return fmtNgay(r.TuNgay) === sTu; })) {
+      throw new Error('Đã có trang tuần bắt đầu từ ngày ' + sTu);
+    }
+    if (ds.some(function (r) { return Number(r.SoTuan) === soTuan; })) {
+      throw new Error('Đã có trang "Tuần ' + soTuan + '". Mỗi tuần chỉ tạo một trang.');
+    }
+    // Không cho hai trang tuần chồng ngày lên nhau
+    const chong = ds.filter(function (r) {
+      return fmtNgay(r.TuNgay) <= sDen && sTu <= fmtNgay(r.DenNgay);
+    })[0];
+    if (chong) {
+      throw new Error('Khoảng ngày này trùng với Tuần ' + chong.SoTuan +
+        ' (' + fmtNgay(chong.TuNgay) + ' đến ' + fmtNgay(chong.DenNgay) + ')');
+    }
+
+    const cfg = docCauHinh();
+    const thang = thangTheoDoiTuan({ TuNgay: sTu, DenNgay: sDen });
+    const maTuan = 'T' + sTu;
+
+    const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEETS.TUAN);
+    sh.getRange('C2:D300').setNumberFormat('@');
+    sh.getRange(sh.getLastRow() + 1, 1, 1, SCHEMA.TuanHoc.length).setValues([[
+      maTuan, soTuan, sTu, sDen, thang, hocKyTheoThang(thang, cfg),
+      (t.ghiChu || ''), phien.ten, new Date()
+    ]]);
+
+    ghiLog(phien.ten, 'TAO_TUAN', 'Tuần ' + soTuan + ' (' + sTu + ' -> ' + sDen + ')');
+    return { maTuan: maTuan, soTuan: soTuan, tuNgay: sTu, denNgay: sDen, thang: thang };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/** Sửa thông tin một trang tuần (số tuần, khoảng ngày, ghi chú). */
+function apiSuaTuan(phien, maTuan, t) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEETS.TUAN);
+    const head = SCHEMA.TuanHoc;
+    const n = sh.getLastRow() - 1;
+    if (n <= 0) throw new Error('Chưa có trang tuần nào');
+    const vals = sh.getRange(2, 1, n, head.length).getValues();
+    const iMa = head.indexOf('MaTuan'), iSo = head.indexOf('SoTuan');
+    const iTu = head.indexOf('TuNgay'), iDen = head.indexOf('DenNgay');
+    const iThang = head.indexOf('Thang'), iHK = head.indexOf('HocKy'), iGC = head.indexOf('GhiChu');
+
+    for (let i = 0; i < vals.length; i++) {
+      if (vals[i][iMa] !== maTuan) continue;
+      const soTuan = Number(t.soTuan);
+      if (!soTuan || soTuan < 1 || soTuan > 60) throw new Error('Số tuần phải từ 1 đến 60');
+      const sTu = fmtNgay(ngayTu(t.tuNgay)), sDen = fmtNgay(ngayTu(t.denNgay));
+      if (sDen < sTu) throw new Error('Ngày kết thúc phải sau ngày bắt đầu');
+
+      // Kiểm tra trùng với các trang khác
+      for (let j = 0; j < vals.length; j++) {
+        if (j === i || !vals[j][iMa]) continue;
+        if (Number(vals[j][iSo]) === soTuan) throw new Error('Đã có trang "Tuần ' + soTuan + '"');
+        if (fmtNgay(vals[j][iTu]) <= sDen && sTu <= fmtNgay(vals[j][iDen])) {
+          throw new Error('Khoảng ngày trùng với Tuần ' + vals[j][iSo]);
+        }
+      }
+
+      const thang = thangTheoDoiTuan({ TuNgay: sTu, DenNgay: sDen });
+      vals[i][iSo] = soTuan; vals[i][iTu] = sTu; vals[i][iDen] = sDen;
+      vals[i][iThang] = thang; vals[i][iHK] = hocKyTheoThang(thang, docCauHinh());
+      vals[i][iGC] = t.ghiChu || '';
+      sh.getRange(2 + i, 1, 1, head.length).setValues([vals[i]]);
+      ghiLog(phien.ten, 'SUA_TUAN', maTuan + ' -> Tuần ' + soTuan);
+      tinhLaiTatCa();
+      return { ok: true };
+    }
+    throw new Error('Không tìm thấy trang tuần này');
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/** Xoá một trang tuần. Chỉ xoá được khi trang đó chưa ghi mục nào. */
+function apiXoaTuan(phien, maTuan) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const coMuc = docBang(SHEETS.NHATKY).some(function (r) {
+      return r.MaTuan === maTuan && r.TrangThai === 'HOAT_DONG';
+    });
+    if (coMuc) {
+      throw new Error('Trang tuần này đã có dữ liệu. Xoá hết nội dung trong các ô ' +
+        'rồi bấm Lưu trước, sau đó mới xoá được trang.');
+    }
+    const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEETS.TUAN);
+    const head = SCHEMA.TuanHoc;
+    const n = sh.getLastRow() - 1;
+    if (n <= 0) throw new Error('Chưa có trang tuần nào');
+    const vals = sh.getRange(2, 1, n, head.length).getValues();
+    const iMa = head.indexOf('MaTuan');
+    for (let i = 0; i < vals.length; i++) {
+      if (vals[i][iMa] === maTuan) {
+        sh.deleteRow(2 + i);
+        ghiLog(phien.ten, 'XOA_TUAN', maTuan);
+        return { ok: true };
+      }
+    }
+    throw new Error('Không tìm thấy trang tuần này');
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
  * Đọc lưới thi đua của một tuần — đúng cấu trúc sổ giấy.
  * Trả về mỗi học sinh một dòng, mỗi cột là danh sách các mục đã ghi.
  */
@@ -300,7 +444,8 @@ function apiLuoiTuan(phien, maTuan) {
   return {
     tuan: {
       maTuan: tuan.MaTuan, soTuan: tuan.SoTuan, thang: thangTuan,
-      tuNgay: fmtNgay(tuan.TuNgay), denNgay: fmtNgay(tuan.DenNgay)
+      tuNgay: fmtNgay(tuan.TuNgay), denNgay: fmtNgay(tuan.DenNgay),
+      ghiChu: tuan.GhiChu || ''
     },
     cot: Object.keys(COT).map(function (k) {
       return { ma: k, ten: COT[k].ten, diem: diem6[k] };
@@ -329,8 +474,8 @@ function apiLuuLuoiTuan(phien, maTuan, dong) {
     const hs = indexBy(docBang(SHEETS.HS), 'MaHS');
     const nhatKy = docBang(SHEETS.NHATKY);
 
-    const tuan = docBang(SHEETS.TUAN).filter(function (r) { return laTuanHoc(r) && r.MaTuan === maTuan; })[0];
-    if (!tuan) throw new Error('Không có tuần ' + maTuan + ' trong lịch (có thể là tuần nghỉ)');
+    const tuan = docBang(SHEETS.TUAN).filter(function (r) { return r.MaTuan === maTuan; })[0];
+    if (!tuan) throw new Error('Không tìm thấy trang tuần này. Có thể đã bị xoá.');
     const thangTuan = thangTheoDoiTuan(tuan);
     const hocKyTuan = hocKyTheoThang(thangTuan, cfg);
 

@@ -117,6 +117,9 @@ const API = (function () {
     dsHocSinhCuaToi: function () { return post({ action: 'dsHocSinh' }); },
     luoiTuan: function (maTuan) { return post({ action: 'luoiTuan', maTuan: maTuan }); },
     luuLuoiTuan: function (maTuan, dong) { return post({ action: 'luuLuoiTuan', maTuan: maTuan, dong: dong }); },
+    taoTuan: function (tuan) { return post({ action: 'taoTuan', tuan: tuan }); },
+    suaTuan: function (maTuan, tuan) { return post({ action: 'suaTuan', maTuan: maTuan, tuan: tuan }); },
+    xoaTuan: function (maTuan) { return post({ action: 'xoaTuan', maTuan: maTuan }); },
     xoaNhatKy: function (id) { return post({ action: 'xoaNhatKy', id: id }); },
     luuXepLoai: function (items) { return post({ action: 'luuXepLoai', items: items }); },
 

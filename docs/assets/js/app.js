@@ -294,9 +294,14 @@ async function mhChiTiet() {
 
   const d = await API.chiTietHS(ma);
   if (luot !== lanHienThi) return;
-  const thangLoc = Number(thamSo('thang')) || thangMacDinh();
-  const chiTiet = d.chiTiet.filter(function (r) { return !thangLoc || Number(r.thang) === thangLoc; });
-  const cacTuan = (d.tuan || []).filter(function (t) { return !thangLoc || Number(t.thang) === thangLoc; })
+  const tuanLoc = thamSo('tuan');            // lọc đúng 1 tuần, ưu tiên hơn lọc tháng
+  const thangLoc = tuanLoc ? 0 : (Number(thamSo('thang')) || thangMacDinh());
+  const hopTuan = function (maTuan, thang) {
+    if (tuanLoc) return maTuan === tuanLoc;
+    return !thangLoc || Number(thang) === thangLoc;
+  };
+  const chiTiet = d.chiTiet.filter(function (r) { return hopTuan(r.maTuan, r.thang); });
+  const cacTuan = (d.tuan || []).filter(function (t) { return hopTuan(t.maTuan, t.thang); })
     .sort(function (a, b) { return String(a.tuNgay).localeCompare(String(b.tuNgay)); });
   const theoTuan = {};
   chiTiet.forEach(function (r) {
@@ -307,7 +312,19 @@ async function mhChiTiet() {
   const tongDiem = chiTiet.reduce(function (s, r) { return s + Number(r.diem || 0); }, 0);
   const soLoi = chiTiet.filter(function (r) { return r.loai === 'LOI'; }).length;
   const soCong = chiTiet.filter(function (r) { return r.loai === 'CONG'; }).length;
-  const tongHopThang = d.thang.filter(function (t) { return !thangLoc || Number(t.thang) === thangLoc; });
+  const tuanDangLoc = tuanLoc
+    ? (d.tuan || []).filter(function (t) { return t.maTuan === tuanLoc; })[0]
+    : null;
+  const nhanLoc = tuanDangLoc
+    ? 'tuần ' + (tuanDangLoc.soTuan || tuanDangLoc.maTuan)
+    : (thangLoc ? 'tháng ' + thangLoc : 'cả năm');
+  const thangCuaTuanLoc = tuanLoc
+    ? Number((d.tuan || []).filter(function (t) { return t.maTuan === tuanLoc; }).map(function (t) { return t.thang; })[0] || 0)
+    : 0;
+  const tongHopThang = d.thang.filter(function (t) {
+    if (tuanLoc) return Number(t.thang) === thangCuaTuanLoc;
+    return !thangLoc || Number(t.thang) === thangLoc;
+  });
 
   function mucTuan(items, loai) {
     const ds = items.filter(function (r) { return r.loai === loai; });
@@ -352,10 +369,25 @@ async function mhChiTiet() {
         return '<option value="' + esc(x.maHS) + '"' + (x.maHS === ma ? ' selected' : '') + '>' +
           esc(x.hoTen) + '</option>';
       }).join('')}</select>
-      <label class="f" for="iLocThang" style="margin-top:12px">Thời gian theo dõi</label>
-      <select id="iLocThang">${THANG_HOC.map(function (t) {
-        return '<option value="' + t + '"' + (t === thangLoc ? ' selected' : '') + '>Tháng ' + t + '</option>';
-      }).join('')}<option value="0"${thangLoc ? '' : ' selected'}>Cả năm học</option></select>
+      <label class="f" for="iLoc" style="margin-top:12px">Xem theo</label>
+      <select id="iLoc">
+        <option value="thang:0"${!tuanLoc && !thangLoc ? ' selected' : ''}>Cả năm học</option>
+        <optgroup label="Theo tháng">
+          ${THANG_HOC.map(function (t) {
+            return '<option value="thang:' + t + '"' + (!tuanLoc && t === thangLoc ? ' selected' : '') +
+              '>Tháng ' + t + '</option>';
+          }).join('')}
+        </optgroup>
+        ${(d.tuan || []).length ? `<optgroup label="Theo tuần">
+          ${(d.tuan || []).slice().sort(function (a, b) {
+            return String(b.tuNgay).localeCompare(String(a.tuNgay));
+          }).map(function (t) {
+            return '<option value="tuan:' + esc(t.maTuan) + '"' + (t.maTuan === tuanLoc ? ' selected' : '') +
+              '>Tuần ' + esc(t.soTuan || t.maTuan) + ' (' + esc(String(t.tuNgay).slice(8, 10) + '/' + String(t.tuNgay).slice(5, 7)) +
+              '–' + esc(String(t.denNgay).slice(8, 10) + '/' + String(t.denNgay).slice(5, 7)) + ')</option>';
+          }).join('')}
+        </optgroup>` : ''}
+      </select>
     </div>
 
     <div class="card">
@@ -363,21 +395,21 @@ async function mhChiTiet() {
       <p class="hint">${esc(h.maHS)}${h.chucVu ? ' · ' + esc(h.chucVu) : ''}</p>
       <div class="stat">
         <div><div class="n ${tongDiem < 0 ? 'diem am' : 'diem duong'}">${tongDiem > 0 ? '+' : ''}${tongDiem}</div>
-          <div class="l">Điểm thi đua ${thangLoc ? 'tháng ' + thangLoc : 'cả năm'}</div></div>
+          <div class="l">Điểm thi đua ${nhanLoc}</div></div>
         <div><div class="n">${soLoi}</div><div class="l">Lượt vi phạm</div></div>
         <div><div class="n">${soCong}</div><div class="l">Lượt được cộng</div></div>
       </div>
     </div>
 
     <div class="card">
-      <h2>Theo từng tuần${thangLoc ? ' tháng ' + esc(thangLoc) : ''}</h2>
+      <h2>Chi tiết ${nhanLoc}</h2>
       <p class="hint">Nội dung bên dưới là các mục được cán bộ lớp chép lại từ sổ chính theo từng tuần.</p>
       ${cacTuan.length ? '<div class="week-grid">' + cacTuan.map(theTuan).join('') + '</div>'
         : '<div class="empty">Chưa có lịch tuần cho tháng này.</div>'}
     </div>
 
     <div class="card">
-      <h2>Xếp loại ${thangLoc ? 'tháng ' + esc(thangLoc) : 'từng tháng'}</h2>
+      <h2>Xếp loại ${tuanLoc ? 'tháng ' + esc(thangCuaTuanLoc) : (thangLoc ? 'tháng ' + esc(thangLoc) : 'từng tháng')}</h2>
       ${tongHopThang.length ? `<div class="tbl-wrap"><table>
         <thead><tr><th>Tháng</th><th>Xếp loại</th><th style="text-align:right">Điểm</th>
           <th style="text-align:right">Ghi sổ ĐB</th><th style="text-align:right">Hạ bậc</th>
@@ -401,7 +433,15 @@ async function mhChiTiet() {
       }).join(' &nbsp;·&nbsp; ')}</p>` : ''}
     </div>`;
 
-  q('#iHS').onchange = function () { location.hash = '#/chi-tiet?ma=' + encodeURIComponent(this.value) + '&thang=' + thangLoc; };
+  const locHienTai = tuanLoc ? '&tuan=' + encodeURIComponent(tuanLoc) : '&thang=' + thangLoc;
+  q('#iHS').onchange = function () {
+    location.hash = '#/chi-tiet?ma=' + encodeURIComponent(this.value) + locHienTai;
+  };
+  q('#iLoc').onchange = function () {
+    const v = String(this.value).split(':');
+    const p = v[0] === 'tuan' ? '&tuan=' + encodeURIComponent(v[1]) : '&thang=' + v[1];
+    location.hash = '#/chi-tiet?ma=' + encodeURIComponent(ma) + p;
+  };
   q('#iLocThang').onchange = function () { location.hash = '#/chi-tiet?ma=' + encodeURIComponent(ma) + '&thang=' + this.value; };
 }
 
@@ -444,6 +484,96 @@ async function mhThiDua() {
   });
 }
 
+/** Đoán số tuần và khoảng ngày cho trang mới, dựa vào trang gần nhất. */
+function goiYTuanMoi(dsTuan) {
+  const hnayD = new Date();
+  if (!dsTuan || !dsTuan.length) {
+    const t2 = new Date(hnayD); t2.setDate(t2.getDate() - ((t2.getDay() + 6) % 7));
+    const cn = new Date(t2); cn.setDate(cn.getDate() + 6);
+    return { soTuan: 1, tuNgay: ngayISO(t2), denNgay: ngayISO(cn) };
+  }
+  const gan = dsTuan[0];
+  const tu = new Date(String(gan.TuNgay) + 'T12:00:00');
+  tu.setDate(tu.getDate() + 7);
+  const den = new Date(tu); den.setDate(den.getDate() + 6);
+  return { soTuan: Number(gan.SoTuan || 0) + 1, tuNgay: ngayISO(tu), denNgay: ngayISO(den) };
+}
+
+function ngayISO(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') +
+    '-' + String(d.getDate()).padStart(2, '0');
+}
+
+/** Form tạo / sửa một trang tuần. */
+function formTaoTuan(suaTuan, dsTuan) {
+  const v = suaTuan
+    ? { soTuan: suaTuan.soTuan, tuNgay: suaTuan.tuNgay, denNgay: suaTuan.denNgay, ghiChu: suaTuan.ghiChu || '' }
+    : Object.assign({ ghiChu: '' }, goiYTuanMoi(dsTuan));
+  return `
+    <form id="fTuan" class="row" style="gap:10px;align-items:flex-end">
+      <div style="flex:1;min-width:110px">
+        <label class="f">Tuần thứ</label>
+        <input type="number" id="tSo" min="1" max="60" value="${esc(v.soTuan)}" required>
+      </div>
+      <div style="flex:1;min-width:150px">
+        <label class="f">Từ ngày</label>
+        <input type="date" id="tTu" value="${esc(v.tuNgay)}" required>
+      </div>
+      <div style="flex:1;min-width:150px">
+        <label class="f">Đến ngày</label>
+        <input type="date" id="tDen" value="${esc(v.denNgay)}" required>
+      </div>
+      <div style="flex:2;min-width:170px">
+        <label class="f">Ghi chú <span style="font-weight:400">(không bắt buộc)</span></label>
+        <input id="tGhiChu" value="${esc(v.ghiChu)}" placeholder="ví dụ: tuần sau nghỉ Tết">
+      </div>
+      <button class="primary" type="submit">${suaTuan ? 'Lưu trang tuần' : 'Tạo trang'}</button>
+    </form>
+    <p class="hint" style="margin:10px 0 0">Tuần nghỉ Tết, nghỉ lễ thì <strong>không cần tạo trang</strong> —
+      cứ bỏ qua, tuần sau tạo tiếp là được.</p>
+    <div id="tLoi"></div>`;
+}
+
+/** Gắn sự kiện cho form tạo/sửa trang tuần. */
+function ganFormTaoTuan(suaTuan) {
+  const f = q('#fTuan');
+  if (!f) return;
+
+  // Chọn ngày bắt đầu thì tự điền ngày kết thúc sau đó 6 ngày
+  q('#tTu').onchange = function () {
+    const d = new Date(this.value + 'T12:00:00');
+    if (isNaN(d.getTime())) return;
+    const den = q('#tDen');
+    if (!den.value || den.value < this.value) {
+      d.setDate(d.getDate() + 6);
+      den.value = ngayISO(d);
+    }
+  };
+
+  f.onsubmit = async function (ev) {
+    ev.preventDefault();
+    const btn = f.querySelector('button');
+    const tuan = {
+      soTuan: q('#tSo').value,
+      tuNgay: q('#tTu').value,
+      denNgay: q('#tDen').value,
+      ghiChu: q('#tGhiChu').value.trim()
+    };
+    btn.disabled = true; btn.textContent = 'Đang lưu…';
+    try {
+      const kq = suaTuan
+        ? await API.suaTuan(suaTuan.maTuan, tuan)
+        : await API.taoTuan(tuan);
+      LICHTUAN = null;
+      location.hash = '#/cham-diem?tuan=' + (suaTuan ? suaTuan.maTuan : kq.maTuan);
+      dinhTuyen();
+    } catch (e) {
+      q('#tLoi').innerHTML = '<div class="msg err" style="margin-top:10px">' + esc(e.message) + '</div>';
+      btn.disabled = false; btn.textContent = suaTuan ? 'Lưu trang tuần' : 'Tạo trang';
+    }
+  };
+}
+
 // ---------- Sổ thi đua tuần (cán bộ lớp) ----------
 // Dựng đúng lưới của sổ giấy: mỗi học sinh một dòng, 6 cột điểm cộng/trừ.
 // Mỗi mục gõ trong một ô = 1 lượt, tính điểm theo cột đó. Tổng tự cộng.
@@ -452,17 +582,33 @@ async function mhChamDiem() {
   if (!vaiTro()) { location.hash = '#/dang-nhap'; return; }
   loading();
 
-  if (!LICHTUAN) LICHTUAN = await API.lichTuan();
+  LICHTUAN = await API.lichTuan();
   if (luot !== lanHienThi) return;
-  const maTuan = thamSo('tuan') || (LOP.tuanHienTai && LOP.tuanHienTai.MaTuan) ||
-    (LICHTUAN[0] && LICHTUAN[0].MaTuan);
+
+  // Sắp xếp: tuần mới nhất lên đầu, mở lên là vào thẳng tuần đó
+  const tuanHoc = LICHTUAN.filter(function (t) { return t.MaTuan; })
+    .sort(function (a, b) { return String(b.TuNgay).localeCompare(String(a.TuNgay)); });
+
+  if (!tuanHoc.length) {
+    el.innerHTML = `
+      <div class="card">
+        <h2>Chưa có trang tuần nào</h2>
+        <p class="hint">Sổ thi đua bắt đầu bằng việc tạo một trang tuần — giống như mở
+          trang mới trong sổ giấy. Điền tuần mấy, từ ngày đến ngày là xong.</p>
+        ${formTaoTuan()}
+      </div>`;
+    ganFormTaoTuan();
+    return;
+  }
+
+  const maTuan = thamSo('tuan') || tuanHoc[0].MaTuan;
+  const quanLyTuan = vaiTro() === 'LOP_TRUONG' || vaiTro() === 'GVCN';
   const d = await API.luoiTuan(maTuan);
   if (luot !== lanHienThi) return;
   if (d.dong.some(function (r) { return typeof r.phienBan !== 'string'; })) {
     throw new Error('Chức năng nhập đang chờ cập nhật. Nhờ người quản lý triển khai bản Apps Script mới rồi tải lại trang.');
   }
 
-  const tuanHoc = LICHTUAN.filter(function (t) { return t.MaTuan; });
   const oChonTuan = '<select id="iTuan" style="min-width:230px">' + tuanHoc.map(function (t) {
     return '<option value="' + esc(t.MaTuan) + '"' + (t.MaTuan === maTuan ? ' selected' : '') + '>' +
       'Tuần ' + esc(t.SoTuan) + ' — ' + esc(String(t.TuNgay).slice(8, 10) + '/' + String(t.TuNgay).slice(5, 7)) +
@@ -486,8 +632,14 @@ async function mhChamDiem() {
             các ô sẽ hiện nguyên nội dung đã lưu. Sửa chữ, xoá bớt mục rồi bấm
             <em>Lưu thay đổi</em>. Muốn bỏ hẳn một lượt thì xoá đoạn chữ đó khỏi ô.</p>`}
         </div>
-        <div>${oChonTuan}</div>
+        <div class="row" style="gap:8px">
+          ${oChonTuan}
+          <button class="sm" id="btnTrangMoi">+ Trang tuần mới</button>
+          ${quanLyTuan ? '<button class="sm" id="btnSuaTuan">Sửa</button>' +
+                         '<button class="sm" id="btnXoaTuan">Xoá trang</button>' : ''}
+        </div>
       </div>
+      <div id="khungTaoTuan" style="display:none;margin-top:14px"></div>
     </div>
 
     <div class="card">
@@ -544,6 +696,28 @@ async function mhChamDiem() {
 
   q('#iTuan').onchange = function () { location.hash = '#/cham-diem?tuan=' + this.value; };
   q('#iTuan').dataset.hienTai = maTuan;
+
+  q('#btnTrangMoi').onclick = function () { moKhungTuan(); };
+  if (quanLyTuan) {
+    q('#btnSuaTuan').onclick = function () { moKhungTuan(d.tuan); };
+    q('#btnXoaTuan').onclick = async function () {
+      if (!confirm('Xoá trang Tuần ' + d.tuan.soTuan + '?')) return;
+      try { await API.xoaTuan(maTuan); LICHTUAN = null; location.hash = '#/cham-diem'; dinhTuyen(); }
+      catch (e) { alert(e.message); }
+    };
+  }
+
+  function moKhungTuan(suaTuan) {
+    const box = q('#khungTaoTuan');
+    if (box.style.display !== 'none' && box.dataset.sua === String(!!suaTuan)) {
+      box.style.display = 'none'; return;
+    }
+    box.dataset.sua = String(!!suaTuan);
+    box.innerHTML = formTaoTuan(suaTuan, tuanHoc);
+    box.style.display = '';
+    ganFormTaoTuan(suaTuan);
+    box.scrollIntoView({ block: 'nearest' });
+  }
 
   if (d.daChot) return;
 
