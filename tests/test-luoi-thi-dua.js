@@ -5,18 +5,18 @@ const tinhDong = o => Object.keys(DIEM).reduce((t,k)=> t + tachMuc(o[k]).length 
 
 // Chép đúng từ ảnh
 const so = [
-  ['Nguyễn Mai Hoài Anh', { CONG:'Hoá*, 10 Toán, 10 Toán', NHO_LOP:'MTT (Anh)' },  2],
-  ['Đỗ Hoàng Khánh Vân',  { CONG:'Anh+1, Anh+1' },                                  2],
-  ['Trịnh Ngọc Tuệ Lâm',  { CONG:'9 sinh', NHO_LOP:'MTT (Anh)' },                   0],
-  ['Bùi Tuấn Tú',         { NHO_LOP:'MTT (Anh)' },                                 -1],
-  ['Vũ Hoàng Sơn',        {},                                                       0],
-  ['Vũ Hà Chi',           {},                                                       0],
-  ['Chu Bích Diệp',       {},                                                       0],
-  ['Nguyễn Thị Hương Giang',{ CONG:'Anh+1' },                                       1],
-  ['Trần Quang Huy',      { CONG:'Anh+1, 9 sinh' },                                 2],
-  ['Nguyễn Minh Hưng',    {},                                                       0],
-  ['Bùi Văn Hà',          { CONG:'Hoá*, 9 sinh, 10 Toán', NHO_LOP:'MTT (Anh)' },    2],
-  ['Nguyễn Hà Gia Huân',  {},                                                       0],
+  ['Học sinh thử 1', { CONG:'Hoá*, 10 Toán, 10 Toán', NHO_LOP:'MTT (Anh)' },  2],
+  ['Học sinh thử 2',  { CONG:'Anh+1, Anh+1' },                                  2],
+  ['Học sinh thử 3',  { CONG:'9 sinh', NHO_LOP:'MTT (Anh)' },                   0],
+  ['Học sinh thử 4',         { NHO_LOP:'MTT (Anh)' },                                 -1],
+  ['Học sinh thử 5',        {},                                                       0],
+  ['Học sinh thử 6',           {},                                                       0],
+  ['Học sinh thử 7',       {},                                                       0],
+  ['Học sinh thử 8',{ CONG:'Anh+1' },                                       1],
+  ['Học sinh thử 9',      { CONG:'Anh+1, 9 sinh' },                                 2],
+  ['Học sinh thử 10',    {},                                                       0],
+  ['Học sinh thử 11',          { CONG:'Hoá*, 9 sinh, 10 Toán', NHO_LOP:'MTT (Anh)' },    2],
+  ['Học sinh thử 12',  {},                                                       0],
 ];
 
 let pass=0, fail=0, tong=0;

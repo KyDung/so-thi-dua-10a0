@@ -54,7 +54,12 @@ function thapHon(a, b) {
 function tinhLaiTatCa() {
   const lock = LockService.getScriptLock();
   lock.waitLock(30000);
-  try {
+  try { return tinhLaiDuLieu(); }
+  finally { lock.releaseLock(); }
+}
+
+/** Chỉ gọi khi đã giữ ScriptLock. */
+function tinhLaiDuLieu() {
     const cfg = docCauHinh();
     const hs = docBang(SHEETS.HS).filter(function (r) { return r.TrangThai === 'DANG_HOC'; });
     const nhatky = docBang(SHEETS.NHATKY).filter(function (r) { return r.TrangThai === 'HOAT_DONG'; });
@@ -104,6 +109,7 @@ function tinhLaiTatCa() {
 
         // Đã chốt thì giữ nguyên toàn bộ, không tính lại
         if (String(truoc.DaChot).toUpperCase() === 'TRUE') {
+          viLoiNho = congDon ? (Number(truoc.LoiNhoTonKho) || 0) : 0;
           ketQua.push(objToRow(SCHEMA.XepLoaiThang, truoc));
           return;
         }
@@ -164,9 +170,6 @@ function tinhLaiTatCa() {
     tinhXepLoaiKy();
     ghiLog('HE_THONG', 'TINH_LAI', 'Đã cập nhật số liệu ' + ketQua.length + ' bản ghi tháng');
     return ketQua.length;
-  } finally {
-    lock.releaseLock();
-  }
 }
 
 /**
@@ -294,6 +297,13 @@ function xepLoaiMotKy(ds) {
 
 /** Chốt 1 tháng: khóa không cho cán bộ lớp sửa nữa. */
 function chotThang(thang, nguoiChot) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try { return chotThangDuLieu(thang, nguoiChot); }
+  finally { lock.releaseLock(); }
+}
+
+function chotThangDuLieu(thang, nguoiChot) {
   const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEETS.THANG);
   const head = SCHEMA.XepLoaiThang;
   const iThang = head.indexOf('Thang'), iChot = head.indexOf('DaChot');

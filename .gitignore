@@ -24,3 +24,5 @@ desktop.ini
 .idea/
 *.swp
 node_modules/
+output/
+.playwright-cli/

@@ -70,7 +70,7 @@ nav.tabs {
 nav.tabs::-webkit-scrollbar { display: none; }
 nav.tabs a {
   padding: 8px 14px; border-radius: 999px; text-decoration: none;
-  color: var(--ink-mute); white-space: nowrap; font-size: 14px; font-weight: 500;
+  color: #dbe7fa; white-space: nowrap; font-size: 14px; font-weight: 500;
   border: 1px solid transparent;
 }
 nav.tabs a.on { background: var(--card); color: var(--brand); border-color: var(--line); box-shadow: var(--shadow); }

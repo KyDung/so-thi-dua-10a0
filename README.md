@@ -5,6 +5,20 @@
 Web tĩnh trên GitHub Pages + Google Apps Script làm backend + Google Sheet làm database.
 Chi phí: **0 đồng**, không cần máy chủ.
 
+Mục đích: cán bộ lớp **chép lại lỗi và điểm cộng/trừ từ sổ chính** để phụ huynh
+tiện theo dõi. Khi có chênh lệch, đối chiếu sổ chính. Xếp loại nhập theo kết quả
+đã thống nhất với GVCN; các phép tính và gợi ý trên web chỉ hỗ trợ theo dõi.
+
+### Cập nhật bản sửa ngày 29/09/2026
+
+1. Thay nội dung **Code.gs** và **XepLoai.gs** trong dự án Apps Script hiện có.
+2. Triển khai → Quản lý các bản triển khai → sửa → **Phiên bản mới**. Giữ URL `/exec` cũ.
+3. Cập nhật thư mục `docs/` lên GitHub Pages, sau đó tải lại trang và đăng nhập lại.
+
+Không chạy lại khởi tạo database hoặc bắt đầu năm học mới. Không cần đổi cấu trúc Sheet.
+Bản này thêm kiểm tra phiên bản từng dòng để tránh ghi đè khi nhiều người nhập;
+cần cập nhật backend trước frontend. Các kiểm thử dùng dữ liệu giả, chưa ghi thử trên Sheet thật.
+
 ```
 GitHub Pages (docs/)  ──JSONP / POST──►  Apps Script  ──►  Google Sheet
  Phụ huynh, học sinh xem                  doGet/doPost        10 sheet dữ liệu
@@ -62,8 +76,8 @@ xoá ô mật khẩu thường đi. Không phải đụng vào cột `MatKhauHas
 Tài khoản có sẵn: `gvcn` / `gvcn@2026` · `loptruong` / `lt@2026` · `totruong1` / `tt1@2026`.
 **Đổi mật khẩu `gvcn` ngay.**
 
-**3c. Đặt khóa bí mật cho token**: Apps Script → `Cài đặt dự án` → `Thuộc tính tập lệnh`
-→ thêm thuộc tính `SECRET` với giá trị là một chuỗi ngẫu nhiên dài.
+**3c. Khóa bí mật cho token**: script tự sinh `SECRET` ngẫu nhiên khi chưa có.
+Nếu đã đặt khóa riêng trong Thuộc tính tập lệnh thì script giữ nguyên.
 
 ### Bước 4 — Deploy Apps Script
 
@@ -120,18 +134,23 @@ Ai mở cũng xem được, không cần tài khoản.
 
 **Phụ huynh, học sinh** → mở link là xem được ngay, **không cần đăng nhập, không cần mã gì**:
 - Tab *Bảng lớp*: xếp loại cả lớp theo từng tháng, chọn tháng ở góc phải
-- Bấm vào tên bất kỳ → xem chi tiết từng lượt vi phạm / điểm cộng kèm ngày
+- Bấm vào tên bất kỳ → xem chi tiết từng lượt vi phạm / điểm cộng theo tuần, lọc theo tháng
 - Tab *Xếp hạng thi đua*: bảng điểm thi đua giữa các bạn
 
-**Tổ trưởng / lớp trưởng ghi nhật ký hằng ngày** → nút *Cán bộ lớp* ở góc trên → đăng nhập →
-tab *Chấm điểm* → chọn ngày → bấm các ô vi phạm / điểm cộng của từng bạn → **Lưu tất cả**.
-Bấm 1 mục nhiều lần để ghi nhiều lượt (hiện ×2, ×3); bấm lần thứ 4 để bỏ chọn.
+**Tổ trưởng / lớp trưởng chép sổ** → nút *Cán bộ lớp* → đăng nhập → tab *Sổ thi đua*
+→ chọn tuần → gõ nội dung vào cột tương ứng → **Lưu thay đổi**.
+Ví dụ `10 Toán, 9 Văn` trong cột điểm cộng là 2 lượt được cộng. Mỗi mục tính một lượt;
+ngăn các mục bằng dấu phẩy hoặc chấm phẩy. Xóa nội dung ô rồi lưu để sửa phần chép sai.
+Web chỉ lưu những dòng đã thay đổi. Nếu người khác vừa sửa cùng học sinh, web báo xung đột;
+sao chép phần đang nhập rồi tải lại tuần để đối chiếu. Khi mất mạng, nội dung vẫn nằm trên
+màn hình; kiểm tra lại dữ liệu nếu chưa biết lần lưu trước đã tới máy chủ hay chưa.
+Nhật ký theo tuần không xác định ngày xảy ra từng lỗi. Muốn ghi rõ ngày, thêm ngày vào nội dung mục.
 
 **Xếp loại cuối tháng** → lớp trưởng hoặc GVCN vào tab *Bảng lớp*, chọn xếp loại cho từng
 bạn ở ô thả xuống rồi bấm **Lưu xếp loại**. Có nút *Điền theo gợi ý* để điền nhanh rồi sửa lại.
 
-**GVCN** → tab *Quản trị* để chốt tháng và **xuất file Excel đúng mẫu 14 sheet** của
-trường để nộp.
+**GVCN** → tab *Quản trị* để chốt tháng và tạo Google Sheet tổng hợp, sau đó tải xuống Excel.
+Đối chiếu mẫu của trường trước khi dùng để nộp.
 
 ---
 
@@ -185,6 +204,8 @@ không cần sửa code**.
 ```bash
 node tests/test-xep-loai-ky.js     # 12 tình huống xếp loại học kỳ theo quy định mục II
 node tests/test-cong-don-loi.js    # cộng dồn lỗi nhỏ qua các tháng, trần ghi sổ
+node tests/test-luoi-thi-dua.js    # đối chiếu điểm các cột
+node tests/test-luu-so.js          # chạy mã backend thật với Sheet giả: lưu, xung đột, phân quyền, chốt tháng
 ```
 
 ---
@@ -199,7 +220,7 @@ Vì vậy dự án được sắp xếp như sau:
 | Thứ | Ở đâu | Lên GitHub? |
 |---|---|---|
 | Mã nguồn web, danh mục lỗi, quy tắc | repo | ✅ có |
-| Tên giả trong bản demo | `docs/assets/js/demo.js` | ✅ có |
+| Dữ liệu giả phục vụ kiểm thử | `tests/` | ✅ có |
 | **Tên thật học sinh** | chỉ trong Google Sheet | ❌ không |
 | **File Excel gốc, ảnh sổ theo dõi** | `du-lieu-goc/` | ❌ không (đã có trong `.gitignore`) |
 

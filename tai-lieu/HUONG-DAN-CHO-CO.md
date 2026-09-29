@@ -102,9 +102,9 @@ mở nhiều file, không sợ quên file nào.
 
 Đó là chuyện khác. Khi cần nộp, vào web tab **Quản trị → Xuất file Excel theo mẫu trường**.
 
-Script sẽ tạo ra **một Google Sheet MỚI** đúng cấu trúc 14 sheet của trường (sheet tháng 9,
-10, 11… HK1, HK2), điền sẵn dữ liệu, rồi đưa link cho cô. Mở lên chọn *Tệp → Tải xuống →
-Microsoft Excel* là ra file `.xlsx` nộp được.
+Script sẽ tạo ra **một Google Sheet MỚI** gồm các tháng và HK1, HK2, điền sẵn dữ liệu,
+rồi đưa link cho cô. Mở lên chọn *Tệp → Tải xuống → Microsoft Excel* để lấy file `.xlsx`.
+Cần đối chiếu nội dung, bố cục với mẫu của trường trước khi nộp.
 
 File xuất ra này **tách rời hoàn toàn** với file database — xuất bao nhiêu lần cũng được,
 không ảnh hưởng gì đến dữ liệu gốc.
@@ -115,7 +115,7 @@ không ảnh hưởng gì đến dữ liệu gốc.
 
 | Khi nào | Ai | Làm gì |
 |---|---|---|
-| Hằng ngày | Tổ trưởng / lớp trưởng | Web → *Chấm điểm* → chọn ngày → tick lỗi → Lưu |
+| Khi chép sổ | Tổ trưởng / lớp trưởng | Web → *Sổ thi đua* → chọn tuần → gõ các mục vào cột cộng/trừ → *Lưu thay đổi* |
 | Cuối tháng | Lớp trưởng hoặc cô | Web → *Bảng lớp* → chọn xếp loại từng bạn → Lưu xếp loại |
 | Sau khi rà xong | Cô | Web → *Quản trị* → **Chốt tháng** (khoá lại, cán bộ lớp hết sửa được) |
 | Khi cần nộp | Cô | Web → *Quản trị* → **Xuất file Excel** |
