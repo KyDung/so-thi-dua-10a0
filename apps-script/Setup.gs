@@ -135,6 +135,7 @@ function onOpen() {
     .addItem('Khởi tạo database', 'khoiTaoDatabase')
     .addItem('Sinh mã học sinh', 'sinhMaHS')
     .addItem('Tính lại số liệu tất cả các tháng', 'tinhLaiTatCa')
+    .addItem('🗑 Xoá hết trang tuần', 'xoaHetTrangTuan')
     .addSeparator()
     .addItem('👤 Áp dụng tài khoản (sau khi thêm/đổi mật khẩu)', 'apDungTaiKhoan')
     .addItem('👤 Xem danh sách tài khoản', 'xemTaiKhoan')
@@ -389,6 +390,40 @@ function batDauNamHocMoi() {
     '  1. Cập nhật sheet HocSinh nếu lớp có thay đổi danh sách.\n' +
     '  2. Vào web tab "Sổ thi đua" tạo trang tuần 1 của năm học mới.',
     ui.ButtonSet.OK);
+}
+
+/**
+ * Xoá sạch sheet TuanHoc. Dùng khi muốn bỏ lịch tuần cũ (sinh tự động) để
+ * bắt đầu lại bằng cách tự tạo từng trang tuần trên web.
+ * Chặn lại nếu đã có dữ liệu ghi sổ, tránh mất dấu các mục đã nhập.
+ */
+function xoaHetTrangTuan() {
+  const ui = SpreadsheetApp.getUi();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sh = ss.getSheetByName(SHEETS.TUAN);
+  const n = sh.getLastRow() - 1;
+  if (n <= 0) { ui.alert('Sheet TuanHoc đang trống, không có gì để xoá.'); return; }
+
+  const coMuc = docBang(SHEETS.NHATKY).filter(function (r) {
+    return r.TrangThai === 'HOAT_DONG';
+  }).length;
+  if (coMuc) {
+    ui.alert('Không xoá được',
+      'Đang có ' + coMuc + ' mục đã ghi trong sổ thi đua. Xoá trang tuần sẽ làm mất dấu '  +
+      'các mục này.\n\nNếu vẫn muốn làm lại từ đầu, xoá dữ liệu trong sheet NhatKy trước.',
+      ui.ButtonSet.OK);
+    return;
+  }
+
+  const tl = ui.alert('Xoá hết trang tuần',
+    'Xoá ' + n + ' trang tuần trong sheet TuanHoc?\n\n' +
+    'Sau đó vào web tab \"Sổ thi đua\" bấm \"+ Trang tuần mới\" để tạo lại từng tuần.',
+    ui.ButtonSet.YES_NO);
+  if (tl !== ui.Button.YES) return;
+
+  sh.getRange(2, 1, n, SCHEMA.TuanHoc.length).clearContent();
+  ghiLog('GVCN', 'XOA_HET_TUAN', n + ' trang tuần');
+  ui.alert('Đã xoá ' + n + ' trang tuần. Giờ vào web tạo trang tuần đầu tiên.');
 }
 
 function hashMK(mk) {

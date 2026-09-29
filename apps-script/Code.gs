@@ -257,17 +257,29 @@ function apiDsHocSinh(phien) {
 
 
 /**
- * Trang tuần mới nhất (theo ngày bắt đầu). Web mở lên là vào thẳng tuần này.
+ * Trang tuần web nên mở sẵn khi vào:
+ *   1. Tuần đang chứa hôm nay
+ *   2. Nếu không có, tuần gần nhất đã bắt đầu (trường hợp tuần này chưa tạo trang)
+ *   3. Nếu chưa tuần nào bắt đầu, tuần sớm nhất (đầu năm học, tạo trước)
+ * Không lấy "ngày lớn nhất" vì nếu tạo sẵn trang cho cả năm thì sẽ nhảy vào tháng 5.
  */
 function tuanMoiNhat() {
   const ds = docBang(SHEETS.TUAN).filter(function (t) { return t.MaTuan; });
   if (!ds.length) return null;
-  ds.sort(function (a, b) { return fmtNgay(a.TuNgay) < fmtNgay(b.TuNgay) ? 1 : -1; });
-  const t = ds[0];
+  ds.sort(function (a, b) { return fmtNgay(a.TuNgay) < fmtNgay(b.TuNgay) ? -1 : 1; });
+
+  const homNay = fmtNgay(new Date());
+  let chon = ds.filter(function (t) {
+    return fmtNgay(t.TuNgay) <= homNay && homNay <= fmtNgay(t.DenNgay);
+  })[0];
+  if (!chon) {
+    const daQua = ds.filter(function (t) { return fmtNgay(t.TuNgay) <= homNay; });
+    chon = daQua.length ? daQua[daQua.length - 1] : ds[0];
+  }
   return {
-    MaTuan: t.MaTuan, SoTuan: t.SoTuan,
-    TuNgay: fmtNgay(t.TuNgay), DenNgay: fmtNgay(t.DenNgay),
-    Thang: thangTheoDoiTuan(t), HocKy: t.HocKy
+    MaTuan: chon.MaTuan, SoTuan: chon.SoTuan,
+    TuNgay: fmtNgay(chon.TuNgay), DenNgay: fmtNgay(chon.DenNgay),
+    Thang: thangTheoDoiTuan(chon), HocKy: chon.HocKy
   };
 }
 
