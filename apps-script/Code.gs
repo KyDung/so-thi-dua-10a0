@@ -51,8 +51,10 @@ function xuLy(action, p, phien) {
 
     // ---------- Cần đăng nhập: nhập liệu ----------
     case 'dangNhap':      return apiDangNhap(p.tenDangNhap, p.matKhau);
-    case 'luoiTuan':      return apiLuoiTuan(canQuyen(phien, ['TO_TRUONG', 'LOP_TRUONG', 'GVCN']), p.maTuan);
-    case 'luuLuoiTuan':   return apiLuuLuoiTuan(canQuyen(phien, ['TO_TRUONG', 'LOP_TRUONG', 'GVCN']), p.maTuan, p.dong);
+    case 'danhMucDayDu':  return apiDanhMucDayDu();
+    case 'doiMatKhau':    return apiDoiMatKhau(canQuyen(phien, ['PHU_HUYNH', 'TO_TRUONG', 'LOP_TRUONG', 'GVCN']), p.mkCu, p.mkMoi);
+    case 'nhatKyHS':      return apiNhatKyHS(canQuyen(phien, ['TO_TRUONG', 'LOP_TRUONG', 'GVCN']), p.maHS, p.maTuan);
+    case 'themNhatKy':    return apiThemNhatKy(canQuyen(phien, ['TO_TRUONG', 'LOP_TRUONG', 'GVCN']), p.muc);
     case 'taoTuan':       return apiTaoTuan(canQuyen(phien, ['LOP_TRUONG', 'GVCN']), p.tuan);
     case 'suaTuan':       return apiSuaTuan(canQuyen(phien, ['LOP_TRUONG', 'GVCN']), p.maTuan, p.tuan);
     case 'xoaTuan':       return apiXoaTuan(canQuyen(phien, ['LOP_TRUONG', 'GVCN']), p.maTuan);
@@ -87,7 +89,7 @@ function apiThongTinLop() {
 
 function apiBangXepHangTo(maTuan) {
   const cfg = docCauHinh();
-  const diemCoSan = Number(cfg.DiemCoSanTo) || 0;
+  const diemCoSan = 0;   // mô hình mới: điểm xuất phát tính theo từng HS, không cộng cho tổ
   const hs = indexBy(docBang(SHEETS.HS), 'MaHS');
   const tuan = maTuan || (tuanCuaNgay(new Date()) || {}).MaTuan;
 
@@ -145,22 +147,28 @@ function apiChiTietHS(maHS) {
       tuNgay: fmtNgay(t.TuNgay), denNgay: fmtNgay(t.DenNgay)
     };
   });
+  const dmLoi = indexBy(docBang(SHEETS.LOI), 'MaLoi');
+  const dmCong = indexBy(docBang(SHEETS.CONG), 'MaCong');
   const chiTiet = docBang(SHEETS.NHATKY)
     .filter(function (r) { return r.MaHS === maHS && r.TrangThai === 'HOAT_DONG'; })
     .map(function (r) {
-      const c = COT[r.Ma];
+      const dm = r.Loai === 'CONG' ? dmCong[r.Ma] : dmLoi[r.Ma];
       const t = tuan[r.MaTuan];
+      // Mục "khác" do người nhập tự gõ -> lấy nội dung đã ghi làm tên
+      const tuGo = (r.Ma === 'KHAC' || r.Ma === 'CONG_KHAC') && r.MoTa;
       return {
         ngay: fmtNgay(r.Ngay), thang: thangCuaNhatKy(r, tuan), maTuan: r.MaTuan, loai: r.Loai,
         soTuan: t ? t.SoTuan : '',
         tuNgay: t ? fmtNgay(t.TuNgay) : '',
         denNgay: t ? fmtNgay(t.DenNgay) : '',
-        ten: r.MoTa || (c ? c.ten : r.Ma),
-        cot: c ? c.ten : '', nhom: c ? c.nhom : '',
+        ten: tuGo ? r.MoTa : (dm ? (dm.TenLoi || dm.TenCong) : r.Ma),
+        cot: dm ? dm.NhomCha : '', nhom: dm ? dm.Nhom : '',
+        mon: r.Mon || '',
+        ghiChu: tuGo ? '' : (r.MoTa || ''),
         diem: Number(r.Diem) || 0, moTa: ''
       };
     })
-    .sort(function (a, b) { return a.tuNgay < b.tuNgay ? 1 : -1; });
+    .sort(function (a, b) { return a.ngay < b.ngay ? 1 : -1; });
 
   const thang = docBang(SHEETS.THANG)
     .filter(function (r) { return r.MaHS === maHS; })
@@ -177,7 +185,20 @@ function apiChiTietHS(maHS) {
       return { ky: r.Ky, xepLoai: r.XepLoai, nhan: NHAN[r.XepLoai] || '', daDuyet: String(r.DaDuyet).toUpperCase() === 'TRUE', ghiChu: r.GhiChu };
     });
 
-  return { hocSinh: { maHS: hs.MaHS, hoTen: hs.HoTen, to: hs.To, chucVu: hs.ChucVu }, chiTiet: chiTiet, tuan: lichTuan, thang: thang, ky: ky };
+  const diemTuan = docBang(SHEETS.TUANXL)
+    .filter(function (r) { return r.MaHS === maHS; })
+    .map(function (r) {
+      return {
+        maTuan: r.MaTuan, soTuan: r.SoTuan, thang: r.Thang,
+        batDau: soHoac(r.DiemBatDau, 0), cong: soHoac(r.DiemCong, 0),
+        tru: soHoac(r.DiemTru, 0), cuoi: soHoac(r.DiemCuoi, 0),
+        soLoi: soHoac(r.SoLoi, 0),
+        xepLoai: r.XepLoai, nhan: NHAN[r.XepLoai] || ''
+      };
+    });
+
+  return { hocSinh: { maHS: hs.MaHS, hoTen: hs.HoTen, to: hs.To, chucVu: hs.ChucVu },
+           chiTiet: chiTiet, tuan: lichTuan, diemTuan: diemTuan, thang: thang, ky: ky };
 }
 
 // =============== ĐĂNG NHẬP ===============
@@ -194,12 +215,15 @@ function apiDangNhap(ten, mk) {
   ghiLog(ten, 'DANG_NHAP', tk.VaiTro);
   return {
     token: taoToken(tk),
-    hoTen: tk.HoTen, vaiTro: tk.VaiTro, toPhuTrach: tk.ToPhuTrach
+    hoTen: tk.HoTen, vaiTro: tk.VaiTro, toPhuTrach: tk.ToPhuTrach,
+    maHS: tk.MaHS || '',
+    lanDau: laDung(tk.LanDau)     // TRUE -> web bắt đổi mật khẩu trước khi vào
   };
 }
 
 function taoToken(tk) {
-  const payload = { ten: tk.TenDangNhap, vaiTro: tk.VaiTro, to: tk.ToPhuTrach, hetHan: Date.now() + 12 * 3600 * 1000 };
+  const payload = { ten: tk.TenDangNhap, vaiTro: tk.VaiTro, to: tk.ToPhuTrach,
+                    maHS: tk.MaHS || '', hetHan: Date.now() + 12 * 3600 * 1000 };
   const s = Utilities.base64EncodeWebSafe(JSON.stringify(payload));
   return s + '.' + kyChuoi(s);
 }
@@ -211,7 +235,8 @@ function giaiToken(token) {
   if (!Number.isFinite(p.hetHan) || Date.now() > p.hetHan) throw new Error('Phiên đã hết hạn, vui lòng đăng nhập lại');
   const tk = docBang(SHEETS.TK).filter(function (r) { return r.TenDangNhap === p.ten; })[0];
   if (!tk || tk.TrangThai !== 'HOAT_DONG') throw new Error('Tài khoản đã ngừng hoạt động');
-  return { ten: tk.TenDangNhap, vaiTro: tk.VaiTro, to: tk.ToPhuTrach, hetHan: p.hetHan };
+  return { ten: tk.TenDangNhap, vaiTro: tk.VaiTro, to: tk.ToPhuTrach,
+           maHS: tk.MaHS || '', lanDau: laDung(tk.LanDau), hetHan: p.hetHan };
 }
 
 function kyChuoi(s) {
@@ -410,172 +435,182 @@ function apiXoaTuan(phien, maTuan) {
 }
 
 /**
- * Đọc lưới thi đua của một tuần — đúng cấu trúc sổ giấy.
- * Trả về mỗi học sinh một dòng, mỗi cột là danh sách các mục đã ghi.
+ * Đổi mật khẩu. Lần đầu đăng nhập, phụ huynh bắt buộc gọi hàm này.
  */
-function apiLuoiTuan(phien, maTuan) {
-  kiemTraTo(phien);
-  const cfg = docCauHinh();
-  const diem6 = diemCot(cfg);
-  let hs = docBang(SHEETS.HS).filter(function (r) { return r.TrangThai === 'DANG_HOC'; });
-  if (phien.vaiTro === 'TO_TRUONG' && phien.to) {
-    hs = hs.filter(function (r) { return r.To === phien.to; });
+function apiDoiMatKhau(phien, mkCu, mkMoi) {
+  if (!mkMoi || String(mkMoi).length < 6) {
+    throw new Error('Mật khẩu mới phải từ 6 ký tự trở lên');
   }
-
-  const tuan = docBang(SHEETS.TUAN).filter(function (r) { return r.MaTuan === maTuan; })[0];
-  if (!tuan) throw new Error('Không có tuần ' + maTuan + ' trong lịch');
-  const thangTuan = thangTheoDoiTuan(tuan);
-
-  const daChot = {};
-  docBang(SHEETS.THANG).forEach(function (r) {
-    if (String(r.DaChot).toUpperCase() === 'TRUE') daChot[r.MaHS + '|' + r.Thang] = true;
-  });
-
-  // Gom các mục đã ghi theo học sinh -> cột
-  const theo = {};
-  const nhatKy = docBang(SHEETS.NHATKY);
-  nhatKy.forEach(function (r) {
-    if (r.TrangThai !== 'HOAT_DONG' || r.MaTuan !== maTuan) return;
-    if (!theo[r.MaHS]) theo[r.MaHS] = {};
-    if (!theo[r.MaHS][r.Ma]) theo[r.MaHS][r.Ma] = [];
-    theo[r.MaHS][r.Ma].push(String(r.MoTa || '').trim());
-  });
-
-  const dong = hs.map(function (h) {
-    const o = { maHS: h.MaHS, hoTen: h.HoTen, chucVu: h.ChucVu, o: {}, tong: 0,
-      phienBan: phienBanDong(nhatKy, maTuan, h.MaHS) };
-    Object.keys(COT).forEach(function (k) {
-      const ds = (theo[h.MaHS] && theo[h.MaHS][k]) || [];
-      o.o[k] = ds.join(', ');
-      o.tong += ds.length * diem6[k];
-    });
-    return o;
-  });
-
-  const diemCoSan = Number(cfg.DiemCoSan);
-  return {
-    tuan: {
-      maTuan: tuan.MaTuan, soTuan: tuan.SoTuan, thang: thangTuan,
-      tuNgay: fmtNgay(tuan.TuNgay), denNgay: fmtNgay(tuan.DenNgay),
-      ghiChu: tuan.GhiChu || ''
-    },
-    cot: Object.keys(COT).map(function (k) {
-      return { ma: k, ten: COT[k].ten, diem: diem6[k] };
-    }),
-    dong: dong,
-    tongHS: dong.reduce(function (a, b) { return a + b.tong; }, 0),
-    diemCoSan: isNaN(diemCoSan) ? 0 : diemCoSan,
-    daChot: !!daChot[(hs[0] || {}).MaHS + '|' + thangTuan]
-  };
-}
-
-/**
- * Chỉ thay các dòng học sinh được gửi lên, sau khi đối chiếu phiên bản đã đọc.
- * Giữ lịch sử bản cũ và không thay dữ liệu của các học sinh khác.
- *
- * dong: [{ maHS, o: { CONG: 'Hoá*, 10 Toán', NHO_LOP: 'MTT (Anh)', ... } }]
- */
-function apiLuuLuoiTuan(phien, maTuan, dong) {
-  kiemTraTo(phien);
-  if (!Array.isArray(dong) || !dong.length) throw new Error('Chưa có thay đổi để lưu');
+  if (String(mkMoi) === String(mkCu)) {
+    throw new Error('Mật khẩu mới phải khác mật khẩu cũ');
+  }
   const lock = LockService.getScriptLock();
   lock.waitLock(30000);
   try {
-    const cfg = docCauHinh();
-    const diem6 = diemCot(cfg);
-    const hs = indexBy(docBang(SHEETS.HS), 'MaHS');
-    const nhatKy = docBang(SHEETS.NHATKY);
-
-    const tuan = docBang(SHEETS.TUAN).filter(function (r) { return r.MaTuan === maTuan; })[0];
-    if (!tuan) throw new Error('Không tìm thấy trang tuần này. Có thể đã bị xoá.');
-    const thangTuan = thangTheoDoiTuan(tuan);
-    const hocKyTuan = hocKyTheoThang(thangTuan, cfg);
-
-    const daChot = {};
-    docBang(SHEETS.THANG).forEach(function (r) {
-      if (String(r.DaChot).toUpperCase() === 'TRUE') daChot[r.MaHS + '|' + r.Thang] = true;
-    });
-
-    // Tập học sinh được phép sửa
-    const trongPhamVi = {};
-    (dong || []).forEach(function (d) {
-      const h = hs[d.maHS];
-      if (!h || h.TrangThai !== 'DANG_HOC') throw new Error('Không có học sinh đang học ' + d.maHS);
-      if (trongPhamVi[d.maHS]) throw new Error('Trùng học sinh trong dữ liệu gửi lên');
-      if (!d.o || Object.keys(COT).some(function (k) { return typeof d.o[k] !== 'string'; })) {
-        throw new Error('Thiếu nội dung các cột. Hãy tải lại trang trước khi nhập.');
-      }
-      if (typeof d.phienBan !== 'string') throw new Error('Hãy tải lại trang để cập nhật chức năng lưu');
-      if (d.phienBan !== phienBanDong(nhatKy, maTuan, d.maHS)) {
-        throw new Error('Dữ liệu của ' + h.HoTen + ' đã được sửa ở phiên khác. Sao chép phần đang nhập rồi tải lại tuần để đối chiếu. Chưa lưu thay đổi nào.');
-      }
-      if (phien.vaiTro === 'TO_TRUONG' && phien.to && h.To !== phien.to) {
-        throw new Error('Bạn chỉ được ghi cho học sinh trong ' + phien.to);
-      }
-      if (daChot[d.maHS + '|' + thangTuan]) {
-        throw new Error('Tháng ' + thangTuan + ' đã chốt, không sửa được');
-      }
-      trongPhamVi[d.maHS] = true;
-    });
-
-    // 1. Đánh dấu xoá bản ghi cũ của tuần này, chỉ với HS trong phạm vi
-    const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEETS.NHATKY);
-    const head = SCHEMA.NhatKy;
+    const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEETS.TK);
+    const head = SCHEMA.TaiKhoan;
     const n = sh.getLastRow() - 1;
-    const vals = n > 0 ? sh.getRange(2, 1, n, head.length).getValues() : [];
-    if (n > 0) {
-      const iTuan = head.indexOf('MaTuan'), iMa = head.indexOf('MaHS'), iTT = head.indexOf('TrangThai');
-      for (let i = 0; i < vals.length; i++) {
-        if (vals[i][iTuan] === maTuan && trongPhamVi[vals[i][iMa]] && vals[i][iTT] === 'HOAT_DONG') {
-          vals[i][iTT] = 'DA_THAY';
-        }
-      }
+    if (n <= 0) throw new Error('Không có tài khoản nào');
+    const vals = sh.getRange(2, 1, n, head.length).getValues();
+    const iTen = head.indexOf('TenDangNhap'), iHash = head.indexOf('MatKhauHash');
+    const iLanDau = head.indexOf('LanDau'), iGC = head.indexOf('GhiChu');
+
+    for (let i = 0; i < vals.length; i++) {
+      if (String(vals[i][iTen]).toLowerCase() !== String(phien.ten).toLowerCase()) continue;
+      if (vals[i][iHash] !== hashMK(mkCu)) throw new Error('Mật khẩu cũ không đúng');
+      vals[i][iHash] = hashMK(mkMoi);
+      vals[i][iLanDau] = false;
+      vals[i][iGC] = 'Đã tự đổi mật khẩu ' + fmtNgay(new Date());
+      sh.getRange(2 + i, 1, 1, head.length).setValues([vals[i]]);
+      ghiLog(phien.ten, 'DOI_MAT_KHAU', '');
+      return { ok: true };
     }
-
-    // 2. Ghi bản ghi mới: mỗi mục trong ô là 1 dòng
-    const ngay = fmtNgay(tuan.TuNgay);
-    const rows = [];
-    (dong || []).forEach(function (d) {
-      Object.keys(COT).forEach(function (k) {
-        tachMuc(d.o ? d.o[k] : '').forEach(function (muc) {
-          rows.push([
-            Utilities.getUuid(), d.maHS, ngay, maTuan, thangTuan, hocKyTuan,
-            k === 'CONG' ? 'CONG' : 'LOI', k, diem6[k], muc,
-            phien.ten, new Date(), 'HOAT_DONG'
-          ]);
-        });
-      });
-    });
-    // Ghi lịch sử và dữ liệu mới cùng một lần, tránh xoá bản cũ trước khi ghi bản mới.
-    const tatCa = vals.concat(rows);
-    if (tatCa.length) sh.getRange(2, 1, tatCa.length, head.length).setValues(tatCa);
-
-    ghiLog(phien.ten, 'LUU_LUOI_TUAN', maTuan + ': ' + rows.length + ' mục');
-    let canhBao = '';
-    try { tinhLaiDuLieu(); }
-    catch (e) { canhBao = 'Đã lưu sổ tuần, nhưng chưa cập nhật bảng tổng hợp. Nhờ GVCN bấm Tính lại số liệu.'; }
-    const moi = rows.map(function (r) { const o = {}; head.forEach(function (k, i) { o[k] = r[i]; }); return o; });
-    const phienBan = {};
-    dong.forEach(function (d) { phienBan[d.maHS] = phienBanDong(moi, maTuan, d.maHS); });
-    return { soMuc: rows.length, soHS: dong.length, phienBan: phienBan, canhBao: canhBao };
+    throw new Error('Không tìm thấy tài khoản');
   } finally {
     lock.releaseLock();
   }
 }
 
-/** ID đổi mỗi lần sửa một dòng; kiểm tra dưới cùng khóa với thao tác ghi. */
-function phienBanDong(nhatKy, maTuan, maHS) {
-  return JSON.stringify(nhatKy.filter(function (r) {
-    return r.MaTuan === maTuan && r.MaHS === maHS && r.TrangThai === 'HOAT_DONG';
-  }).map(function (r) { return String(r.Id); }).sort());
+/** Danh mục lỗi và điểm cộng, kèm nhóm cha để web dựng ô chọn có phân nhóm. */
+function apiDanhMucDayDu() {
+  const hien = function (r) { return String(r.HienThi).toUpperCase() !== 'FALSE'; };
+  return {
+    loi: docBang(SHEETS.LOI).filter(hien).map(function (r) {
+      return {
+        ma: r.MaLoi, ten: r.TenLoi, nhomCha: r.NhomCha, nhom: r.Nhom,
+        diem: soHoac(r.DiemTru, 0), canMon: laDung(r.CanMon),
+        nhanDoi: laDung(r.NhanDoiTuLan2), ghiSo: laDung(r.GhiSoDauBai),
+        tuNhap: r.MaLoi === 'KHAC'
+      };
+    }),
+    cong: docBang(SHEETS.CONG).filter(hien).map(function (r) {
+      return {
+        ma: r.MaCong, ten: r.TenCong, nhomCha: r.NhomCha,
+        diem: soHoac(r.DiemCong, 0), canMon: laDung(r.CanMon),
+        tuNhap: r.MaCong === 'CONG_KHAC'
+      };
+    })
+  };
 }
 
-/** Tách nội dung một ô thành các mục. Ngăn bằng dấu phẩy, chấm phẩy hoặc xuống dòng. */
-function tachMuc(s) {
-  if (!s) return [];
-  return String(s).split(/[,;\n]+/)
-    .map(function (x) { return x.trim(); })
-    .filter(function (x) { return x.length > 0; });
+/**
+ * Nhật ký theo NGÀY của một học sinh trong một tuần — đúng bảng cô gửi:
+ *   ngày | Lỗi vi phạm - Môn | Môn - Điểm tốt | Môn - Điểm kém | Ghi chú
+ */
+function apiNhatKyHS(phien, maHS, maTuan) {
+  const hs = docBang(SHEETS.HS).filter(function (r) { return r.MaHS === maHS; })[0];
+  if (!hs) throw new Error('Không tìm thấy học sinh');
+  if (phien.vaiTro === 'TO_TRUONG' && phien.to && hs.To !== phien.to) {
+    throw new Error('Bạn chỉ xem được học sinh trong ' + phien.to);
+  }
+
+  const tuan = docBang(SHEETS.TUAN).filter(function (r) { return r.MaTuan === maTuan; })[0];
+  if (!tuan) throw new Error('Không tìm thấy trang tuần này');
+
+  const dmLoi = indexBy(docBang(SHEETS.LOI), 'MaLoi');
+  const dmCong = indexBy(docBang(SHEETS.CONG), 'MaCong');
+
+  const ds = docBang(SHEETS.NHATKY).filter(function (r) {
+    return r.MaHS === maHS && r.MaTuan === maTuan && r.TrangThai === 'HOAT_DONG';
+  }).map(function (r) {
+    const dm = r.Loai === 'CONG' ? dmCong[r.Ma] : dmLoi[r.Ma];
+    const tuGo = (r.Ma === 'KHAC' || r.Ma === 'CONG_KHAC');
+    return {
+      id: r.Id, ngay: fmtNgay(r.Ngay), loai: r.Loai, ma: r.Ma,
+      ten: tuGo && r.MoTa ? r.MoTa : (dm ? (dm.TenLoi || dm.TenCong) : r.Ma),
+      nhomCha: dm ? dm.NhomCha : '', nhom: dm ? dm.Nhom : '',
+      mon: r.Mon || '', diem: soHoac(r.Diem, 0),
+      ghiChu: tuGo ? '' : (r.MoTa || ''),
+      nguoiNhap: r.NguoiNhap
+    };
+  }).sort(function (a, b) { return a.ngay < b.ngay ? -1 : 1; });
+
+  const cfg = docCauHinh();
+  const batDau = soHoac(cfg.DiemXuatPhatTuan, 100);
+  const xl = docBang(SHEETS.TUANXL).filter(function (r) {
+    return r.MaHS === maHS && r.MaTuan === maTuan;
+  })[0] || {};
+
+  return {
+    hocSinh: { maHS: hs.MaHS, hoTen: hs.HoTen, chucVu: hs.ChucVu },
+    tuan: {
+      maTuan: tuan.MaTuan, soTuan: tuan.SoTuan,
+      tuNgay: fmtNgay(tuan.TuNgay), denNgay: fmtNgay(tuan.DenNgay),
+      thang: thangTheoDoiTuan(tuan)
+    },
+    dong: ds,
+    tong: {
+      batDau: soHoac(xl.DiemBatDau, batDau),
+      cong: soHoac(xl.DiemCong, 0),
+      tru: soHoac(xl.DiemTru, 0),
+      cuoi: soHoac(xl.DiemCuoi, batDau),
+      soLoi: soHoac(xl.SoLoi, 0),
+      xepLoai: xl.XepLoai || '', nhan: NHAN[xl.XepLoai] || ''
+    }
+  };
+}
+
+/**
+ * Thêm một dòng nhật ký cho học sinh vào một ngày cụ thể.
+ * muc: { maHS, ngay, loai:'LOI'|'CONG', ma, mon, ghiChu, diem (chỉ cho mục "khác") }
+ */
+function apiThemNhatKy(phien, muc) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const hs = indexBy(docBang(SHEETS.HS), 'MaHS');
+    const h = hs[muc.maHS];
+    if (!h || h.TrangThai !== 'DANG_HOC') throw new Error('Không có học sinh đang học ' + muc.maHS);
+    if (phien.vaiTro === 'TO_TRUONG' && phien.to && h.To !== phien.to) {
+      throw new Error('Bạn chỉ được ghi cho học sinh trong ' + phien.to);
+    }
+
+    const ngay = fmtNgay(ngayTu(muc.ngay));
+    const tuan = docBang(SHEETS.TUAN).filter(function (t) {
+      return t.MaTuan && fmtNgay(t.TuNgay) <= ngay && ngay <= fmtNgay(t.DenNgay);
+    })[0];
+    if (!tuan) throw new Error('Ngày ' + ngay + ' không nằm trong trang tuần nào. Hãy tạo trang tuần trước.');
+
+    const thang = thangTheoDoiTuan(tuan);
+    const cfg = docCauHinh();
+    if (docBang(SHEETS.THANG).some(function (r) {
+      return r.MaHS === muc.maHS && Number(r.Thang) === Number(thang) && laDung(r.DaChot);
+    })) throw new Error('Tháng ' + thang + ' đã chốt, không ghi thêm được');
+
+    const laCong = muc.loai === 'CONG';
+    const dm = laCong
+      ? docBang(SHEETS.CONG).filter(function (r) { return r.MaCong === muc.ma; })[0]
+      : docBang(SHEETS.LOI).filter(function (r) { return r.MaLoi === muc.ma; })[0];
+    if (!dm) throw new Error('Không có mã "' + muc.ma + '" trong danh mục');
+
+    const tuNhap = muc.ma === 'KHAC' || muc.ma === 'CONG_KHAC';
+    let diem;
+    if (tuNhap) {
+      if (!String(muc.ghiChu || '').trim()) throw new Error('Mục "khác" cần ghi rõ nội dung');
+      diem = Number(muc.diem);
+      if (isNaN(diem) || diem === 0) throw new Error('Mục "khác" cần nhập số điểm khác 0');
+      diem = laCong ? Math.abs(diem) : -Math.abs(diem);
+    } else {
+      diem = soHoac(laCong ? dm.DiemCong : dm.DiemTru, 0);
+    }
+
+    if (laDung(dm.CanMon) && !String(muc.mon || '').trim()) {
+      throw new Error('Mục "' + (dm.TenLoi || dm.TenCong) + '" cần ghi rõ môn học');
+    }
+
+    const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEETS.NHATKY);
+    sh.getRange(sh.getLastRow() + 1, 1, 1, SCHEMA.NhatKy.length).setValues([[
+      Utilities.getUuid(), muc.maHS, ngay, tuan.MaTuan, thang, hocKyTheoThang(thang, cfg),
+      laCong ? 'CONG' : 'LOI', muc.ma, String(muc.mon || '').trim(), diem,
+      String(muc.ghiChu || '').trim(), phien.ten, new Date(), 'HOAT_DONG'
+    ]]);
+
+    ghiLog(phien.ten, 'THEM_NHAT_KY', muc.maHS + ' ' + ngay + ' ' + muc.ma + ' (' + diem + ')');
+    tinhLaiTatCa();
+    return { ok: true, diem: diem, maTuan: tuan.MaTuan, thang: thang };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 /** Không xóa cứng - chỉ đổi trạng thái, giữ vết để truy được. */
@@ -684,6 +719,7 @@ function apiXuatExcel(phien) {
   const bangThang = {};
   docBang(SHEETS.THANG).forEach(function (r) { bangThang[r.MaHS + '|' + r.Thang] = r; });
   const tuan = indexBy(docBang(SHEETS.TUAN), 'MaTuan');
+  const dmLoiXuat = indexBy(docBang(SHEETS.LOI), 'MaLoi');
   const nhatky = docBang(SHEETS.NHATKY).filter(function (r) { return r.TrangThai === 'HOAT_DONG'; });
   const bangKy = {};
   docBang(SHEETS.KY).forEach(function (r) { bangKy[r.MaHS + '|' + r.Ky] = r.XepLoai; });
@@ -704,8 +740,9 @@ function apiXuatExcel(phien) {
         return r.MaHS === h.MaHS && thangCuaNhatKy(r, tuan) === thang && r.Loai === 'LOI';
       }).map(function (r) {
         const d = new Date(r.Ngay);
-        const c = COT[r.Ma];
-        return d.getDate() + '/' + (d.getMonth() + 1) + ': ' + (r.MoTa || (c ? c.ten : r.Ma));
+        const dm = dmLoiXuat[r.Ma];
+        const ten = (r.Ma === 'KHAC' && r.MoTa) ? r.MoTa : (dm ? dm.TenLoi : r.Ma);
+        return d.getDate() + '/' + (d.getMonth() + 1) + ': ' + ten + (r.Mon ? ' (' + r.Mon + ')' : '');
       }).join('\n');
       const xl = bangThang[h.MaHS + '|' + thang];
       return [i + 1, h.HoTen, dsLoi, (xl && NHAN[xl.XepLoai]) || '', (xl && xl.GhiChu) || ''];

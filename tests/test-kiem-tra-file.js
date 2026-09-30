@@ -49,7 +49,7 @@ const sandbox = {
 vm.createContext(sandbox);
 
 // const ở cấp cao nhất không gắn vào global, phải lôi ra bằng một đoạn phụ
-const layHang = ';globalThis.__HANG = { SHEETS, SCHEMA, COT, BAC, NHAN, DS_LOI, DS_CONG, DS_CAUHINH };';
+const layHang = ';globalThis.__HANG = { SHEETS, SCHEMA, BAC, NHAN, DS_LOI, DS_CONG, DS_CAUHINH };';
 
 let napDuoc = true, loiNap = '';
 try { vm.runInContext(nguon + layHang, sandbox, { timeout: 5000 }); }
@@ -58,7 +58,7 @@ const HANG = sandbox.__HANG || {};
 kt('4 file .gs nạp được cùng nhau', napDuoc, loiNap);
 
 if (napDuoc) {
-  [['SHEETS', 'object'], ['SCHEMA', 'object'], ['COT', 'object'],
+  [['SHEETS', 'object'], ['SCHEMA', 'object'],
    ['BAC', 'object'], ['NHAN', 'object'],
    ['DS_LOI', 'object'], ['DS_CONG', 'object'], ['DS_CAUHINH', 'object']
   ].forEach(([ten, loai]) => {
@@ -69,20 +69,39 @@ if (napDuoc) {
   // Các hàm web gọi tới, thiếu cái nào là web sập
   ['doGet', 'doPost', 'xuLy', 'onOpen', 'khoiTaoDatabase',
    'apiThongTinLop', 'apiLichTuan', 'apiChiTietHS', 'apiBangLop',
-   'apiTaoTuan', 'apiSuaTuan', 'apiXoaTuan', 'apiLuoiTuan', 'apiLuuLuoiTuan',
+   'apiTaoTuan', 'apiSuaTuan', 'apiXoaTuan',
    'apiDangNhap', 'tinhLaiTatCa', 'luuXepLoai', 'chotThang',
-   'ngayTu', 'fmtNgay', 'thangTheoDoiTuan', 'hocKyTheoThang', 'diemCot',
-   'donLichSu', 'xoaHetTrangTuan', 'batDauNamHocMoi', 'apDungTaiKhoan'
+   'ngayTu', 'fmtNgay', 'thangTheoDoiTuan', 'hocKyTheoThang',
+   'donLichSu', 'xoaHetTrangTuan', 'batDauNamHocMoi', 'apDungTaiKhoan',
+   'khongDau', 'taoTaiKhoanPhuHuynh', 'apiDoiMatKhau', 'apiNhatKyHS', 'apiThemNhatKy',
+   'apiDanhMucDayDu', 'nguongTuan', 'xepLoaiTheoDiem', 'tinhXepLoaiThang'
   ].forEach(h => {
     kt('hàm ' + (h + '()').padEnd(24) + ' tồn tại', typeof sandbox[h] === 'function',
        'đang là ' + typeof sandbox[h]);
   });
 
-  // Cấu trúc 6 cột của sổ thi đua
-  const cot = Object.keys(HANG.COT || {});
-  kt('COT đủ 6 cột của sổ giấy',
-     cot.length === 6 && ['CONG','NHO_TRUONG','NHO_LOP','HB_TRUONG','HB_LOP','HK_YEU']
-       .every(k => cot.includes(k)), cot.join(','));
+  // Danh mục lỗi phải khớp tài liệu hướng dẫn thi đua
+  const dsLoi = HANG.DS_LOI || [];
+  const maLoi = dsLoi.map(r => r[0]);
+  kt('DS_LOI có đủ các nhóm lỗi chính',
+     ['CC02','RV01','TP01','XE05','GH01','GH02','GH06','TT02','KHAC'].every(m => maLoi.includes(m)),
+     maLoi.length + ' lỗi');
+  kt('Có mục "Lỗi khác" cho trường hợp phát sinh', maLoi.includes('KHAC'));
+  kt('Nhóm lỗi chỉ gồm NHO / HA_BAC / CHUA_DAT',
+     dsLoi.every(r => ['NHO','HA_BAC','CHUA_DAT'].includes(r[3])),
+     [...new Set(dsLoi.map(r => r[3]))].join(','));
+  kt('Mọi điểm trừ đều <= 0', dsLoi.every(r => Number(r[4]) <= 0));
+
+  const dsCong = HANG.DS_CONG || [];
+  kt('DS_CONG có 3 mức điểm tốt 10 / 9 / 8',
+     ['DT10','DT09','DT08'].every(m => dsCong.some(r => r[0] === m)));
+  kt('Có mục "Điểm cộng khác"', dsCong.some(r => r[0] === 'CONG_KHAC'));
+
+  // Ngưỡng điểm phải có trong cấu hình
+  const cfgKeys = (HANG.DS_CAUHINH || []).map(r => r[0]);
+  kt('CauHinh có đủ ngưỡng thang 100đ',
+     ['DiemXuatPhatTuan','NguongTuan_Tot','NguongTuan_Kha','NguongTuan_Dat'].every(k => cfgKeys.includes(k)),
+     cfgKeys.length + ' khoá');
 
   // Mọi action trong xuLy phải có hàm xử lý
   const actions = [...nguon.matchAll(/case '([a-zA-Z]+)':\s*(?:canQuyen[^;]*;\s*)?return (api[A-Za-z]+|\{)/g)]

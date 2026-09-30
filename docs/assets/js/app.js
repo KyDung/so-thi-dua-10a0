@@ -106,6 +106,7 @@ function dinhTuyen() {
     'thi-dua': mhThiDua,
     'cham-diem': mhChamDiem,
     'quan-tri': mhQuanTri,
+    'doi-mat-khau': mhDoiMatKhau,
     'dang-nhap': mhDangNhap
   }[ten] || mhBangLop;
   mh().catch(function (e) { if (luot === lanHienThi) loi(e); });
@@ -114,7 +115,11 @@ function dinhTuyen() {
 }
 
 function capNhatNav() {
+  const laPH = vaiTro() === 'PHU_HUYNH';
   document.querySelectorAll('[data-canQuyen]').forEach(function (a) {
+    a.style.display = (vaiTro() && !laPH) ? '' : 'none';
+  });
+  document.querySelectorAll('[data-doiMK]').forEach(function (a) {
     a.style.display = vaiTro() ? '' : 'none';
   });
   document.querySelectorAll('[data-gvcn]').forEach(function (a) {
@@ -285,11 +290,13 @@ async function mhBangLop() {
 
 // ---------- Chi tiết 1 học sinh ----------
 async function mhChiTiet() {
+  // Phụ huynh chỉ xem được con mình, không đổi sang học sinh khác
+  const phuHuynh = vaiTro() === 'PHU_HUYNH' ? (Store.get('maHS') || '') : '';
   const luot = lanHienThi;
   loading();
   if (!DSHS) DSHS = await API.dsHocSinh();
   if (luot !== lanHienThi) return;
-  const ma = thamSo('ma') || (DSHS[0] && DSHS[0].maHS);
+  const ma = phuHuynh || thamSo('ma') || (DSHS[0] && DSHS[0].maHS);
   if (!ma) { el.innerHTML = '<div class="empty">Chưa có học sinh nào.</div>'; return; }
 
   const d = await API.chiTietHS(ma);
@@ -364,11 +371,11 @@ async function mhChiTiet() {
 
   el.innerHTML = `
     <div class="card">
-      <label class="f" for="iHS">Chọn học sinh</label>
+      ${phuHuynh ? '' : `<label class="f" for="iHS">Chọn học sinh</label>
       <select id="iHS">${DSHS.map(function (x) {
         return '<option value="' + esc(x.maHS) + '"' + (x.maHS === ma ? ' selected' : '') + '>' +
           esc(x.hoTen) + '</option>';
-      }).join('')}</select>
+      }).join('')}</select>`}
       <label class="f" for="iLoc" style="margin-top:12px">Xem theo</label>
       <select id="iLoc">
         <option value="thang:0"${!tuanLoc && !thangLoc ? ' selected' : ''}>Cả năm học</option>
@@ -434,7 +441,8 @@ async function mhChiTiet() {
     </div>`;
 
   const locHienTai = tuanLoc ? '&tuan=' + encodeURIComponent(tuanLoc) : '&thang=' + thangLoc;
-  q('#iHS').onchange = function () {
+  const oHS = q('#iHS');
+  if (oHS) oHS.onchange = function () {
     location.hash = '#/chi-tiet?ma=' + encodeURIComponent(this.value) + locHienTai;
   };
   q('#iLoc').onchange = function () {
@@ -573,9 +581,9 @@ function ganFormTaoTuan(suaTuan) {
   };
 }
 
-// ---------- Sổ thi đua tuần (cán bộ lớp) ----------
-// Dựng đúng lưới của sổ giấy: mỗi học sinh một dòng, 6 cột điểm cộng/trừ.
-// Mỗi mục gõ trong một ô = 1 lượt, tính điểm theo cột đó. Tổng tự cộng.
+// ---------- Sổ thi đua: nhập theo NGÀY cho từng học sinh ----------
+// Dựng theo bảng cô gửi: ngày | Lỗi vi phạm - Môn | Môn - Điểm tốt | Môn - Điểm kém | Ghi chú
+// Mỗi HS bắt đầu tuần với 100đ, chọn lỗi thì tự trừ, có mục "khác" để gõ tay.
 async function mhChamDiem() {
   const luot = lanHienThi;
   if (!vaiTro()) { location.hash = '#/dang-nhap'; return; }
@@ -583,8 +591,6 @@ async function mhChamDiem() {
 
   LICHTUAN = await API.lichTuan();
   if (luot !== lanHienThi) return;
-
-  // Sắp xếp: tuần mới nhất lên đầu, mở lên là vào thẳng tuần đó
   const tuanHoc = LICHTUAN.filter(function (t) { return t.MaTuan; })
     .sort(function (a, b) { return String(b.TuNgay).localeCompare(String(a.TuNgay)); });
 
@@ -600,36 +606,36 @@ async function mhChamDiem() {
     return;
   }
 
-  const maTuan = thamSo('tuan') || tuanHoc[0].MaTuan;
-  const quanLyTuan = vaiTro() === 'LOP_TRUONG' || vaiTro() === 'GVCN';
-  const d = await API.luoiTuan(maTuan);
+  if (!DANHMUC) DANHMUC = await API.danhMucDayDu();
+  if (!DSHS) DSHS = await API.dsHocSinhCuaToi();
   if (luot !== lanHienThi) return;
-  if (d.dong.some(function (r) { return typeof r.phienBan !== 'string'; })) {
-    throw new Error('Chức năng nhập đang chờ cập nhật. Nhờ người quản lý triển khai bản Apps Script mới rồi tải lại trang.');
-  }
+  if (!DSHS.length) { el.innerHTML = '<div class="empty">Không có học sinh nào bạn được ghi.</div>'; return; }
 
-  const oChonTuan = '<select id="iTuan" style="min-width:230px">' + tuanHoc.map(function (t) {
+  const maTuan = thamSo('tuan') || tuanHoc[0].MaTuan;
+  const maHS = thamSo('ma') || DSHS[0].maHS;
+  const quanLyTuan = vaiTro() === 'LOP_TRUONG' || vaiTro() === 'GVCN';
+
+  const d = await API.nhatKyHS(maHS, maTuan);
+  if (luot !== lanHienThi) return;
+
+  const oChonTuan = '<select id="iTuan" style="min-width:210px">' + tuanHoc.map(function (t) {
     return '<option value="' + esc(t.MaTuan) + '"' + (t.MaTuan === maTuan ? ' selected' : '') + '>' +
-      'Tuần ' + esc(t.SoTuan) + ' — ' + esc(String(t.TuNgay).slice(8, 10) + '/' + String(t.TuNgay).slice(5, 7)) +
-      ' đến ' + esc(String(t.DenNgay).slice(8, 10) + '/' + String(t.DenNgay).slice(5, 7)) + '</option>';
+      'Tuần ' + esc(t.SoTuan) + ' — ' + esc(ngayNgan(t.TuNgay)) + ' đến ' + esc(ngayNgan(t.DenNgay)) +
+      '</option>';
   }).join('') + '</select>';
 
-  // Nhóm cột cho đúng kiểu đầu bảng 2 tầng của sổ giấy
-  const cot = d.cot;
-  const cotTru = cot.filter(function (c) { return c.ma !== 'CONG'; });
+  const oChonHS = '<select id="iChonHS" style="min-width:200px">' + DSHS.map(function (h) {
+    return '<option value="' + esc(h.maHS) + '"' + (h.maHS === maHS ? ' selected' : '') + '>' +
+      esc(h.hoTen) + '</option>';
+  }).join('') + '</select>';
 
+  const t = d.tong;
   el.innerHTML = `
     <div class="card">
       <div class="row" style="justify-content:space-between;align-items:flex-end">
         <div>
-          <h2>Sổ thi đua — Tuần ${esc(d.tuan.soTuan)}, tháng ${esc(d.tuan.thang)}</h2>
-          <p class="hint" style="margin:0">Từ ${esc(d.tuan.tuNgay)} đến ${esc(d.tuan.denNgay)} ·
-            ${d.daChot ? '<span class="badge DAT">tháng đã chốt, không sửa được</span>'
-                       : 'Gõ mỗi lượt một mục, nhiều mục ngăn bằng dấu phẩy'}</p>
-          ${d.daChot ? '' : `<p class="hint" style="margin:6px 0 0">
-            <strong>Nhập sai thì sửa thế nào?</strong> Chọn lại đúng tuần đó ở ô bên phải —
-            các ô sẽ hiện nguyên nội dung đã lưu. Sửa chữ, xoá bớt mục rồi bấm
-            <em>Lưu thay đổi</em>. Muốn bỏ hẳn một lượt thì xoá đoạn chữ đó khỏi ô.</p>`}
+          <h2>Sổ thi đua — Tuần ${esc(d.tuan.soTuan)}</h2>
+          <p class="hint" style="margin:0">${esc(d.tuan.tuNgay)} đến ${esc(d.tuan.denNgay)} · tháng ${esc(d.tuan.thang)}</p>
         </div>
         <div class="row" style="gap:8px">
           ${oChonTuan}
@@ -642,59 +648,98 @@ async function mhChamDiem() {
     </div>
 
     <div class="card">
-      <div class="tbl-wrap"><table class="luoi">
-        <thead>
-          <tr>
-            <th rowspan="2" style="min-width:34px">TT</th>
-            <th rowspan="2" style="min-width:150px">Họ và tên</th>
-            <th rowspan="2" class="c-cong">Điểm cộng<br><span class="dv">(+${esc(cot[0].diem)}đ / mục)</span></th>
-            <th colspan="${cotTru.length}" style="text-align:center">Điểm trừ</th>
-            <th rowspan="2" style="text-align:right;min-width:70px">Tổng</th>
-          </tr>
-          <tr>
-            ${cotTru.map(function (c) {
-              return '<th class="c-tru">' + esc(c.ten.replace('Hạ 1 bậc HK', 'Hạ 1 bậc')).replace(' - ', '<br>') +
-                '<br><span class="dv">(' + esc(c.diem) + 'đ)</span></th>';
-            }).join('')}
-          </tr>
-        </thead>
-        <tbody>
-          ${d.dong.map(function (r, i) {
-            return `<tr data-ma="${esc(r.maHS)}">
-              <td>${i + 1}</td>
-              <td class="ten">${esc(r.hoTen)}${r.chucVu ? '<br><span class="cv">(' + esc(r.chucVu) + ')</span>' : ''}</td>
-              ${cot.map(function (c) {
-                return '<td><input class="o" data-cot="' + esc(c.ma) + '" data-diem="' + esc(c.diem) + '" ' +
-                  'aria-label="' + esc(r.hoTen + ' — ' + c.ten) + '" value="' + esc(r.o[c.ma] || '') + '"' + (d.daChot ? ' disabled' : '') + '></td>';
-              }).join('')}
-              <td class="tong" style="text-align:right">${diemHTML(r.tong)}</td>
-            </tr>`;
-          }).join('')}
-        </tbody>
-        <tfoot>
-          <tr>
-            <td colspan="${2 + cot.length}" style="text-align:right"><strong>TỔNG:</strong></td>
-            <td style="text-align:right"><strong id="tongHS" class="diem">${esc(d.tongHS)}</strong></td>
-          </tr>
-          <tr>
-            <td colspan="${2 + cot.length}" style="text-align:right"><strong>ĐIỂM CÓ SẴN:</strong></td>
-            <td style="text-align:right"><strong class="diem">${esc(d.diemCoSan)}</strong></td>
-          </tr>
-          <tr>
-            <td colspan="${2 + cot.length}" style="text-align:right"><strong>ĐIỂM TỔNG:</strong></td>
-            <td style="text-align:right"><strong id="diemTong" class="diem">${esc(d.tongHS + d.diemCoSan)}</strong></td>
-          </tr>
-        </tfoot>
-      </table></div>
+      <div class="row" style="justify-content:space-between;align-items:flex-end">
+        <div style="flex:1;min-width:200px">
+          <label class="f">Học sinh</label>
+          ${oChonHS}
+        </div>
+        <div class="stat" style="flex:2;min-width:260px">
+          <div><div class="n diem">${esc(t.batDau)}</div><div class="l">Điểm đầu tuần</div></div>
+          <div><div class="n diem duong">+${esc(t.cong)}</div><div class="l">Cộng</div></div>
+          <div><div class="n diem am">${esc(t.tru)}</div><div class="l">Trừ</div></div>
+          <div><div class="n ${t.cuoi >= t.batDau ? 'diem duong' : 'diem am'}">${esc(t.cuoi)}</div>
+            <div class="l">Còn lại</div></div>
+          <div><div class="n">${t.xepLoai ? '<span class="badge ' + esc(t.xepLoai) + '">' + esc(t.nhan) + '</span>' : '—'}</div>
+            <div class="l">Xếp loại tuần</div></div>
+        </div>
+      </div>
+    </div>
 
-      ${d.daChot ? '' : `<div class="row" style="margin-top:14px">
-        <button class="primary" id="btnLuu" disabled>Lưu thay đổi</button>
-        <span id="trangThaiLuu" class="hint" role="status" style="margin:0">Chưa có thay đổi.</span>
-      </div>`}
+    <div class="card">
+      <h2>Thêm một mục</h2>
+      <p class="hint">Chọn lỗi trong danh sách thì web tự trừ điểm. Không có trong danh sách thì
+        chọn <strong>Lỗi khác</strong> rồi tự ghi nội dung và số điểm.</p>
+      <form id="fThem">
+        <div class="row" style="gap:10px">
+          <div style="flex:1;min-width:140px">
+            <label class="f">Ngày</label>
+            <input type="date" id="mNgay" value="${esc(ngayTrongTuan(d.tuan))}"
+              min="${esc(d.tuan.tuNgay)}" max="${esc(d.tuan.denNgay)}" required>
+          </div>
+          <div style="flex:1;min-width:130px">
+            <label class="f">Loại</label>
+            <select id="mLoai">
+              <option value="LOI">Lỗi vi phạm</option>
+              <option value="CONG">Điểm cộng</option>
+            </select>
+          </div>
+          <div style="flex:3;min-width:240px">
+            <label class="f">Nội dung</label>
+            <select id="mMa"></select>
+          </div>
+        </div>
+        <div class="row" style="gap:10px;margin-top:10px">
+          <div style="flex:1;min-width:130px" id="oMon">
+            <label class="f">Môn <span id="monBatBuoc" style="font-weight:400"></span></label>
+            <input id="mMon" list="dsMon" placeholder="Toán, Văn, Anh...">
+            <datalist id="dsMon">
+              ${['Toán','Văn','Anh','Lí','Hoá','Sinh','Sử','Địa','GDCD','Tin','Công nghệ','Thể dục','GDQP']
+                .map(function (m) { return '<option value="' + m + '">'; }).join('')}
+            </datalist>
+          </div>
+          <div style="flex:1;min-width:110px;display:none" id="oDiem">
+            <label class="f">Số điểm</label>
+            <input type="number" id="mDiem" step="1" min="1" placeholder="5">
+          </div>
+          <div style="flex:2;min-width:180px">
+            <label class="f">Ghi chú</label>
+            <input id="mGhiChu" placeholder="không bắt buộc">
+          </div>
+          <button class="primary" type="submit" style="align-self:flex-end">Thêm</button>
+        </div>
+        <p class="hint" id="mGoiY" style="margin:10px 0 0"></p>
+      </form>
+      <div id="mLoi"></div>
+    </div>
+
+    <div class="card">
+      <h2>Đã ghi trong tuần <span style="color:var(--ink-mute);font-weight:400">(${d.dong.length} mục)</span></h2>
+      ${d.dong.length ? `<div class="tbl-wrap"><table>
+        <thead><tr><th>Ngày</th><th>Nội dung</th><th>Môn</th><th>Ghi chú</th>
+          <th style="text-align:right">Điểm</th><th></th></tr></thead>
+        <tbody>${d.dong.map(function (r) {
+          return `<tr>
+            <td style="white-space:nowrap">${esc(ngayNgan(r.ngay))}</td>
+            <td>${esc(r.ten)}
+              ${r.nhom === 'HA_BAC' ? '<span class="badge DAT">hạ 1 bậc</span>' : ''}
+              ${r.nhom === 'CHUA_DAT' ? '<span class="badge CHUA_DAT">chưa đạt</span>' : ''}
+              ${r.nhomCha ? '<br><small style="color:var(--ink-mute)">' + esc(r.nhomCha) + '</small>' : ''}</td>
+            <td>${esc(r.mon)}</td>
+            <td style="color:var(--ink-mute)">${esc(r.ghiChu)}</td>
+            <td style="text-align:right">${diemHTML(r.diem)}</td>
+            <td><button class="sm btnXoaMuc" data-id="${esc(r.id)}">Xoá</button></td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table></div>` : '<div class="empty">Chưa ghi mục nào cho bạn này trong tuần.</div>'}
     </div>`;
 
-  q('#iTuan').onchange = function () { location.hash = '#/cham-diem?tuan=' + this.value; };
+  // ---- điều hướng ----
+  const diTiep = function (tuan, hs) {
+    location.hash = '#/cham-diem?tuan=' + encodeURIComponent(tuan) + '&ma=' + encodeURIComponent(hs);
+  };
+  q('#iTuan').onchange = function () { diTiep(this.value, maHS); };
   q('#iTuan').dataset.hienTai = maTuan;
+  q('#iChonHS').onchange = function () { diTiep(maTuan, this.value); };
 
   q('#btnTrangMoi').onclick = function () { moKhungTuan(); };
   if (quanLyTuan) {
@@ -718,73 +763,86 @@ async function mhChamDiem() {
     box.scrollIntoView({ block: 'nearest' });
   }
 
-  if (d.daChot) return;
-
-  /** Đếm số mục trong một ô: ngăn bằng dấu phẩy, chấm phẩy hoặc xuống dòng. */
-  function demMuc(v) {
-    return String(v || '').split(/[,;\n]+/)
-      .map(function (x) { return x.trim(); })
-      .filter(function (x) { return x.length > 0; }).length;
+  // ---- ô chọn nội dung đổi theo Loại ----
+  function veLaiDanhMuc() {
+    const laCong = q('#mLoai').value === 'CONG';
+    const ds = laCong ? DANHMUC.cong : DANHMUC.loi;
+    const nhom = {};
+    ds.forEach(function (x) { (nhom[x.nhomCha || 'Khác'] = nhom[x.nhomCha || 'Khác'] || []).push(x); });
+    q('#mMa').innerHTML = Object.keys(nhom).map(function (g) {
+      return '<optgroup label="' + esc(g) + '">' + nhom[g].map(function (x) {
+        const d = x.tuNhap ? 'tự nhập' : (x.diem > 0 ? '+' + x.diem : String(x.diem)) + 'đ';
+        return '<option value="' + esc(x.ma) + '">' + esc(x.ten) + ' (' + d + ')</option>';
+      }).join('') + '</optgroup>';
+    }).join('');
+    veLaiMuc();
   }
 
-  function tinhLaiTong() {
-    let tong = 0;
-    qa('tbody tr[data-ma]').forEach(function (tr) {
-      let t = 0;
-      tr.querySelectorAll('.o').forEach(function (inp) {
-        t += demMuc(inp.value) * Number(inp.dataset.diem);
-      });
-      tr.querySelector('.tong').innerHTML = diemHTML(t);
-      tong += t;
-    });
-    q('#tongHS').textContent = tong;
-    q('#tongHS').className = 'diem ' + (tong > 0 ? 'duong' : (tong < 0 ? 'am' : ''));
-    q('#diemTong').textContent = tong + Number(d.diemCoSan);
+  function mucDangChon() {
+    const laCong = q('#mLoai').value === 'CONG';
+    const ds = laCong ? DANHMUC.cong : DANHMUC.loi;
+    return ds.filter(function (x) { return x.ma === q('#mMa').value; })[0];
   }
 
-  const banDau = {};
-  d.dong.forEach(function (r) { banDau[r.maHS] = r; });
-  function cacDongDoi() {
-    return qa('tbody tr[data-ma]').map(function (tr) {
-      const o = {};
-      tr.querySelectorAll('.o').forEach(function (inp) { o[inp.dataset.cot] = inp.value; });
-      return { maHS: tr.dataset.ma, o: o, phienBan: banDau[tr.dataset.ma].phienBan };
-    }).filter(function (r) {
-      return cot.some(function (c) { return r.o[c.ma] !== (banDau[r.maHS].o[c.ma] || ''); });
-    });
+  function veLaiMuc() {
+    const m = mucDangChon();
+    if (!m) return;
+    q('#oDiem').style.display = m.tuNhap ? '' : 'none';
+    q('#mDiem').required = !!m.tuNhap;
+    q('#monBatBuoc').textContent = m.canMon ? '(bắt buộc)' : '(không bắt buộc)';
+    q('#mMon').required = !!m.canMon;
+    q('#mGhiChu').placeholder = m.tuNhap ? 'ghi rõ nội dung — bắt buộc' : 'không bắt buộc';
+    const nhac = [];
+    if (m.tuNhap) nhac.push('Tự ghi nội dung và số điểm.');
+    else nhac.push('Tự trừ ' + Math.abs(m.diem) + 'đ.');
+    if (m.nhanDoi) nhac.push('Tái phạm trong cùng tuần thì trừ gấp đôi.');
+    if (m.ghiSo) nhac.push('Tính 1 lần bị ghi sổ đầu bài.');
+    if (m.nhom === 'HA_BAC') nhac.push('Hạ 1 bậc hạnh kiểm tháng.');
+    if (m.nhom === 'CHUA_DAT') nhac.push('Xếp loại Chưa đạt tháng đó.');
+    q('#mGoiY').textContent = nhac.join(' ');
   }
-  qa('.o').forEach(function (inp) { inp.oninput = function () {
-    tinhLaiTong();
-    const n = cacDongDoi().length;
-    chuaLuu = n > 0;
-    q('#btnLuu').disabled = !chuaLuu;
-    q('#trangThaiLuu').textContent = n ? n + ' học sinh có thay đổi chưa lưu.' : 'Chưa có thay đổi.';
-  }; });
 
-  q('#btnLuu').onclick = async function () {
-    qa(':scope > .msg').forEach(function (x) { x.remove(); });
-    const dong = cacDongDoi();
-    if (!dong.length) return;
-    this.disabled = true; this.textContent = 'Đang lưu…';
-    dangLuu = true;
-    qa('.o, #iTuan').forEach(function (x) { x.disabled = true; });
+  q('#mLoai').onchange = veLaiDanhMuc;
+  q('#mMa').onchange = veLaiMuc;
+  veLaiDanhMuc();
+
+  // ---- thêm mục ----
+  q('#fThem').onsubmit = async function (ev) {
+    ev.preventDefault();
+    const btn = q('#fThem button');
+    btn.disabled = true; btn.textContent = 'Đang lưu…';
     try {
-      const r = await API.luuLuoiTuan(maTuan, dong);
-      dong.forEach(function (x) { banDau[x.maHS].o = x.o; banDau[x.maHS].phienBan = r.phienBan[x.maHS]; });
-      chuaLuu = false;
-      q('#trangThaiLuu').textContent = 'Đã lưu thay đổi của ' + dong.length + ' học sinh.';
-      el.insertAdjacentHTML('afterbegin',
-        '<div class="msg ' + (r.canhBao ? 'warn' : 'ok') + '">' + esc(r.canhBao || 'Đã lưu thay đổi tuần ' + d.tuan.soTuan + '.') + '</div>');
-      window.scrollTo(0, 0);
+      await API.themNhatKy({
+        maHS: maHS, ngay: q('#mNgay').value, loai: q('#mLoai').value,
+        ma: q('#mMa').value, mon: q('#mMon').value.trim(),
+        ghiChu: q('#mGhiChu').value.trim(), diem: q('#mDiem').value
+      });
+      dinhTuyen();
     } catch (e) {
-      el.insertAdjacentHTML('afterbegin', '<div class="msg err">' + esc(e.message) + '</div>');
-      window.scrollTo(0, 0);
-    } finally {
-      dangLuu = false;
-      qa('.o, #iTuan').forEach(function (x) { x.disabled = false; });
-      this.disabled = !chuaLuu; this.textContent = 'Lưu thay đổi';
+      q('#mLoi').innerHTML = '<div class="msg err" style="margin-top:10px">' + esc(e.message) + '</div>';
+      btn.disabled = false; btn.textContent = 'Thêm';
     }
   };
+
+  qa('.btnXoaMuc').forEach(function (b) {
+    b.onclick = async function () {
+      if (!confirm('Xoá mục này?')) return;
+      b.disabled = true;
+      try { await API.xoaNhatKy(b.dataset.id); dinhTuyen(); }
+      catch (e) { alert(e.message); b.disabled = false; }
+    };
+  });
+}
+
+/** Ngày mặc định khi thêm mục: hôm nay nếu nằm trong tuần, không thì ngày đầu tuần. */
+function ngayTrongTuan(tuan) {
+  const h = hnay();
+  return (h >= tuan.tuNgay && h <= tuan.denNgay) ? h : tuan.tuNgay;
+}
+
+function ngayNgan(s) {
+  s = String(s || '');
+  return s.length >= 10 ? s.slice(8, 10) + '/' + s.slice(5, 7) : s;
 }
 
 // ---------- Quản trị (GVCN) ----------
@@ -831,6 +889,52 @@ async function mhQuanTri() {
       bao('ok', 'Đã tạo: <a href="' + esc(r.url) + '" target="_blank" rel="noopener">' + esc(r.ten) + '</a> ' +
         '(mở lên rồi chọn Tệp → Tải xuống → Microsoft Excel)');
     } catch (e) { bao('err', esc(e.message)); }
+  };
+}
+
+// ---------- Đổi mật khẩu (bắt buộc ở lần đăng nhập đầu) ----------
+let mkCuTamThoi = '';
+
+async function mhDoiMatKhau() {
+  if (!vaiTro()) { location.hash = '#/dang-nhap'; return; }
+  el.innerHTML = `
+    <div class="card" style="max-width:440px;margin:0 auto">
+      <h2>Đổi mật khẩu</h2>
+      <p class="hint">${mkCuTamThoi
+        ? 'Đây là lần đăng nhập đầu tiên. Hãy đặt mật khẩu riêng để người khác không vào được tài khoản của bạn.'
+        : 'Đặt mật khẩu mới cho tài khoản ' + esc(Store.get('hoTen') || '') + '.'}</p>
+      <form id="fMK">
+        <label class="f">Mật khẩu hiện tại</label>
+        <input id="mkCu" type="password" value="${esc(mkCuTamThoi)}" autocomplete="current-password" required>
+        <label class="f" style="margin-top:10px">Mật khẩu mới <span style="font-weight:400">(từ 6 ký tự)</span></label>
+        <input id="mkMoi" type="password" minlength="6" autocomplete="new-password" required>
+        <label class="f" style="margin-top:10px">Nhập lại mật khẩu mới</label>
+        <input id="mkLai" type="password" minlength="6" autocomplete="new-password" required>
+        <button class="primary" type="submit" style="margin-top:14px;width:100%">Đổi mật khẩu</button>
+      </form>
+      <div id="mkLoi"></div>
+    </div>`;
+
+  q('#fMK').onsubmit = async function (ev) {
+    ev.preventDefault();
+    const bao = function (t) { q('#mkLoi').innerHTML = '<div class="msg err" style="margin-top:12px">' + esc(t) + '</div>'; };
+    if (q('#mkMoi').value !== q('#mkLai').value) { bao('Hai ô mật khẩu mới không giống nhau'); return; }
+    const btn = q('#fMK button');
+    btn.disabled = true; btn.textContent = 'Đang đổi…';
+    try {
+      await API.doiMatKhau(q('#mkCu').value, q('#mkMoi').value);
+      mkCuTamThoi = '';
+      const vt = vaiTro();
+      el.innerHTML = '<div class="msg ok">Đã đổi mật khẩu. Lần sau đăng nhập bằng mật khẩu mới.</div>';
+      setTimeout(function () {
+        if (vt === 'PHU_HUYNH') location.hash = '#/chi-tiet?ma=' + encodeURIComponent(Store.get('maHS') || '');
+        else location.hash = vt === 'GVCN' ? '#/bang-lop' : '#/cham-diem';
+        dinhTuyen();
+      }, 1200);
+    } catch (e) {
+      bao(e.message);
+      btn.disabled = false; btn.textContent = 'Đổi mật khẩu';
+    }
   };
 }
 

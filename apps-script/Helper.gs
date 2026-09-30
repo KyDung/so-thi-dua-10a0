@@ -100,6 +100,38 @@ function ngayTu(v) {
   throw new Error('Không đọc được ngày: "' + v + '". Cần dạng yyyy-MM-dd.');
 }
 
+/**
+ * Bỏ dấu tiếng Việt, bỏ khoảng trắng, chuyển thành chữ thường.
+ * "NGUYỄN HOÀNG ANH" -> "nguyenhoanganh"
+ * Dùng để sinh tên đăng nhập và mật khẩu mặc định cho phụ huynh.
+ *
+ * Ghép theo từng nhóm chữ cái, không dùng hai chuỗi song song vì chỉ cần
+ * lệch một ký tự là cả bảng ánh xạ sai (đã từng ra "ĐẶNG" -> "yang").
+ */
+function khongDau(s) {
+  const nhom = {
+    a: 'aàáạảãâầấậẩẫăằắặẳẵ',
+    e: 'eèéẹẻẽêềếệểễ',
+    i: 'iìíịỉĩ',
+    o: 'oòóọỏõôồốộổỗơờớợởỡ',
+    u: 'uùúụủũưừứựửữ',
+    y: 'yỳýỵỷỹ',
+    d: 'dđ'
+  };
+  const map = {};
+  Object.keys(nhom).forEach(function (k) {
+    for (let i = 0; i < nhom[k].length; i++) map[nhom[k].charAt(i)] = k;
+  });
+
+  const t = String(s || '').toLowerCase();
+  let kq = '';
+  for (let i = 0; i < t.length; i++) {
+    const c = t.charAt(i);
+    kq += map[c] !== undefined ? map[c] : c;
+  }
+  return kq.replace(/[^a-z0-9]/g, '');
+}
+
 function fmtNgay(d) {
   if (!d) return '';
   if (typeof d === 'string') return d.slice(0, 10);

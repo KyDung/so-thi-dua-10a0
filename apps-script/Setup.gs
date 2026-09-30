@@ -10,6 +10,7 @@ const SHEETS = {
   TUAN: 'TuanHoc',
   NHATKY: 'NhatKy',
   THANG: 'XepLoaiThang',
+  TUANXL: 'XepLoaiTuan',
   KY: 'XepLoaiKy',
   TK: 'TaiKhoan',
   CFG: 'CauHinh',
@@ -18,13 +19,14 @@ const SHEETS = {
 
 const SCHEMA = {
   HocSinh: ['MaHS', 'HoTen', 'To', 'ChucVu', 'TrangThai', 'GhiChu'],
-  DanhMucLoi: ['MaLoi', 'TenLoi', 'Nhom', 'PhamVi', 'DiemTru', 'NguongHocKy', 'HienThi', 'GhiChu'],
-  DanhMucCong: ['MaCong', 'TenCong', 'DiemCong', 'CanMon', 'TranTuan', 'HienThi'],
+  DanhMucLoi: ['MaLoi', 'TenLoi', 'NhomCha', 'Nhom', 'DiemTru', 'NhanDoiTuLan2', 'NguongHocKy', 'GhiSoDauBai', 'CanMon', 'HienThi', 'GhiChu'],
+  DanhMucCong: ['MaCong', 'TenCong', 'NhomCha', 'DiemCong', 'CanMon', 'TranTuan', 'HienThi', 'GhiChu'],
   TuanHoc: ['MaTuan', 'SoTuan', 'TuNgay', 'DenNgay', 'Thang', 'HocKy', 'GhiChu', 'NguoiTao', 'ThoiGianTao'],
-  NhatKy: ['Id', 'MaHS', 'Ngay', 'MaTuan', 'Thang', 'HocKy', 'Loai', 'Ma', 'Diem', 'MoTa', 'NguoiNhap', 'ThoiGian', 'TrangThai'],
+  NhatKy: ['Id', 'MaHS', 'Ngay', 'MaTuan', 'Thang', 'HocKy', 'Loai', 'Ma', 'Mon', 'Diem', 'MoTa', 'NguoiNhap', 'ThoiGian', 'TrangThai'],
   XepLoaiThang: ['MaHS', 'Thang', 'HocKy', 'SoLoiNho', 'SoLanGhiSo', 'SoLanHaBac', 'LoiNhoTonKho', 'DiemThiDua', 'XepLoai', 'DeXuat', 'NguoiNhap', 'DaChot', 'NguoiChot', 'ThoiGianChot', 'GhiChu'],
+  XepLoaiTuan: ['MaHS', 'MaTuan', 'SoTuan', 'Thang', 'DiemBatDau', 'DiemCong', 'DiemTru', 'DiemCuoi', 'SoLoi', 'SoLanGhiSo', 'SoLanHaBac', 'CoLoiChuaDat', 'XepLoai'],
   XepLoaiKy: ['MaHS', 'Ky', 'XepLoai', 'DeXuat', 'DaDuyet', 'GhiChu'],
-  TaiKhoan: ['TenDangNhap', 'HoTen', 'MatKhauMoi', 'MatKhauHash', 'VaiTro', 'ToPhuTrach', 'TrangThai', 'GhiChu'],
+  TaiKhoan: ['TenDangNhap', 'HoTen', 'MatKhauMoi', 'MatKhauHash', 'VaiTro', 'MaHS', 'ToPhuTrach', 'LanDau', 'TrangThai', 'GhiChu'],
   CauHinh: ['Khoa', 'GiaTri', 'MoTa'],
   Log: ['ThoiGian', 'NguoiDung', 'HanhDong', 'ChiTiet']
 };
@@ -39,62 +41,104 @@ const SCHEMA = {
  * Cách nhập danh sách: xem hàm sinhMaHS() ở cuối file.
  */
 
-// Nhóm: NHO | HA_BAC | CHUA_DAT   ·   Phạm vi: TRUONG | LOP
-// NguongHocKy > 0 nghĩa là: lần vi phạm thứ N trở đi trong học kỳ mới bị hạ bậc.
+// Danh mục lỗi lấy nguyên từ "huong-dan-thi-đua-cá-nhân-2023-2024.docx".
+// Nhóm:    NHO | HA_BAC (hạ 1 bậc HK) | CHUA_DAT (xếp Chưa đạt tháng đó)
+// NhanDoiTuLan2: lần vi phạm thứ 2 trở đi trong tuần thì nhân đôi mức trừ (mục I của tài liệu)
+// NguongHocKy > 0: lần thứ N trở đi trong học kỳ mới bị hạ bậc
+// GhiSoDauBai: có tính là 1 lần bị ghi tên sổ đầu bài không
 const DS_LOI = [
-  // --- 15 lỗi sinh hoạt dưới cờ (sheet SHTT của file gốc) ---
-  ['SH01', 'Sai đồng phục, thiếu cavat, tóc không đúng quy định, không đeo thẻ', 'NHO', 'TRUONG', -2, 2, true, 'Lần 2 trở đi trong HK thì hạ 1 bậc (QĐ I.3)'],
-  ['SH02', 'Bị nhắc nhở trước cờ, tại hội nghị', 'NHO', 'TRUONG', -2, 0, true, ''],
-  ['SH03', 'Chỗ tập trung có rác', 'NHO', 'LOP', -1, 0, true, ''],
-  ['SH04', 'Tập trung chậm', 'NHO', 'LOP', -1, 0, true, ''],
-  ['SH05', 'Tự ý dời hàng', 'NHO', 'LOP', -1, 0, true, ''],
-  ['SH06', 'Lấy ghế muộn', 'NHO', 'LOP', -1, 0, true, ''],
-  ['SH07', 'Hàng ngũ lộn xộn, ngồi không đúng vị trí', 'NHO', 'LOP', -1, 0, true, ''],
-  ['SH08', 'Không hát quốc ca', 'NHO', 'TRUONG', -2, 0, true, ''],
-  ['SH09', 'Nói chuyện gây mất trật tự', 'NHO', 'TRUONG', -2, 0, true, ''],
-  ['SH10', 'Làm việc riêng, không chú ý', 'NHO', 'LOP', -1, 0, true, ''],
-  ['SH11', 'Không dồn hết ghế', 'NHO', 'LOP', -1, 0, true, ''],
-  ['SH12', 'Không tắt điện hội trường', 'NHO', 'LOP', -1, 0, true, ''],
-  ['SH13', 'Thành viên đội thi đua trực tuần đi muộn', 'NHO', 'TRUONG', -2, 0, true, ''],
-  ['SH14', 'Cán bộ lớp nộp biên bản muộn', 'NHO', 'TRUONG', -2, 0, true, ''],
-  ['SH15', 'Cán bộ lớp không nộp biên bản', 'HA_BAC', 'TRUONG', -6, 0, true, 'Tự xếp - cần cô duyệt (Q10)'],
+  // ===== I.1 Chuyên cần =====
+  ['CC01', 'Nghỉ học có phép vì việc riêng', 'Chuyên cần', 'NHO', -1, true, 0, false, false, true, 'Ốm đau, tai nạn, việc hiếu có giấy phép: không trừ'],
+  ['CC02', 'Nghỉ học không phép', 'Chuyên cần', 'HA_BAC', -5, true, 0, false, false, true, ''],
+  ['CC03', 'Bỏ tiết / nghỉ học không được GV đồng ý', 'Chuyên cần', 'HA_BAC', -5, true, 0, false, true, true, ''],
 
-  // --- Lỗi nề nếp hằng ngày (tự bổ sung, xem câu hỏi Q11) ---
-  ['NN01', 'Đi học muộn', 'NHO', 'LOP', -1, 0, true, 'Tự bổ sung'],
-  ['NN02', 'Không làm bài tập / không chuẩn bị bài', 'NHO', 'LOP', -1, 0, true, 'Tự bổ sung'],
-  ['NN03', 'Trực nhật không sạch / bỏ trực nhật', 'NHO', 'LOP', -1, 0, true, 'Tự bổ sung'],
-  ['NN04', 'Mất trật tự trong giờ học', 'NHO', 'LOP', -1, 0, true, 'Tự bổ sung'],
-  ['NN05', 'Bị ghi tên vào sổ đầu bài', 'NHO', 'TRUONG', -2, 0, true, 'Tính trực tiếp 1 lần ghi sổ'],
+  // ===== I.2 Ra vào lớp =====
+  ['RV01', 'Đi học muộn (sau chuông đầu giờ / bị ghi sổ cờ đỏ)', 'Ra vào lớp', 'NHO', -3, true, 0, false, false, true, ''],
+  ['RV02', 'Vào lớp muộn tiết học', 'Ra vào lớp', 'NHO', -3, true, 0, false, true, true, 'Muộn quá nửa tiết thì tính như bỏ tiết'],
+  ['RV03', 'Ra khỏi khu vực trường khi đang học mà không được phép', 'Ra vào lớp', 'NHO', -5, true, 0, false, false, true, ''],
 
-  // --- Lỗi HẠ 1 BẬC (QĐ mục I.3) ---
-  ['HB01', 'Nghỉ học không phép', 'HA_BAC', 'TRUONG', -6, 0, true, ''],
-  ['HB02', 'Trốn học, bỏ tiết', 'HA_BAC', 'TRUONG', -6, 0, true, ''],
-  ['HB03', 'Không tham gia hoạt động giáo dục do Trường, Đoàn TN tổ chức', 'HA_BAC', 'TRUONG', -6, 0, true, ''],
-  ['HB04', 'Không đội mũ bảo hiểm khi đi xe máy / xe đạp điện', 'HA_BAC', 'TRUONG', -6, 0, true, ''],
-  ['HB05', 'Đi xe máy >50cc khi chưa đủ tuổi / chưa có bằng lái', 'HA_BAC', 'TRUONG', -6, 0, true, ''],
-  ['HB06', 'Bị phê bình vì thiếu nghiêm túc, gây rối hoạt động tập thể', 'HA_BAC', 'TRUONG', -6, 0, true, ''],
-  ['HB07', 'Sử dụng điện thoại trong hoạt động giáo dục', 'HA_BAC', 'TRUONG', -6, 0, true, ''],
-  ['HB08', 'Không nộp điện thoại vào tủ lớp trước giờ học 5 phút', 'HA_BAC', 'LOP', -2, 0, true, ''],
-  ['HB09', 'Chơi game online không lành mạnh, dùng Internet mục đích xấu', 'HA_BAC', 'TRUONG', -6, 0, true, ''],
+  // ===== I.3 Trang phục =====
+  ['TP01', 'Không đeo phù hiệu / thẻ học sinh', 'Trang phục', 'NHO', -2, true, 2, false, false, true, 'Lần 2 trong học kỳ thì hạ 1 bậc HK'],
+  ['TP02', 'Không mặc đồng phục đúng quy định, không đi giày/dép quai hậu', 'Trang phục', 'NHO', -3, true, 2, false, false, true, ''],
+  ['TP03', 'Đầu tóc không gọn gàng, tóc nhuộm', 'Trang phục', 'NHO', -5, true, 2, false, false, true, ''],
 
-  // --- Lỗi CHƯA ĐẠT (QĐ mục I.4) ---
-  ['CD01', 'Điều khiển xe máy khi chưa đủ điều kiện / vi phạm Luật GTĐB bị thông báo', 'CHUA_DAT', 'TRUONG', -12, 0, true, ''],
-  ['CD02', 'Sai phạm nghiêm trọng hoặc lặp lại nhiều lần dù đã được giáo dục', 'CHUA_DAT', 'TRUONG', -12, 0, true, ''],
-  ['CD03', 'Vô lễ, xúc phạm nhân phẩm, danh dự, thân thể GV/NV nhà trường', 'CHUA_DAT', 'TRUONG', -12, 0, true, ''],
-  ['CD04', 'Gian lận trong học tập, kiểm tra, thi', 'CHUA_DAT', 'TRUONG', -12, 0, true, ''],
-  ['CD05', 'Xúc phạm danh dự bạn; đánh nhau, gây rối trật tự trị an', 'CHUA_DAT', 'TRUONG', -12, 0, true, ''],
-  ['CD06', 'Đánh bạc, ma túy, vũ khí, chất nổ, văn hóa phẩm đồi trụy, tệ nạn xã hội', 'CHUA_DAT', 'TRUONG', -12, 0, true, '']
+  // ===== I.4 Của công, trực nhật, vệ sinh =====
+  ['VS01', 'Viết vẽ bậy lên bàn, lên tường', 'Vệ sinh - của công', 'NHO', -3, true, 0, false, false, true, ''],
+  ['VS02', 'Phá bình nước, làm hỏng bàn ghế', 'Vệ sinh - của công', 'NHO', -5, true, 0, false, false, true, ''],
+  ['VS03', 'Trực nhật muộn hoặc không sạch sẽ', 'Vệ sinh - của công', 'NHO', -3, true, 0, false, false, true, ''],
+  ['VS04', 'Xả rác không đúng nơi quy định, ăn quà trong lớp', 'Vệ sinh - của công', 'NHO', -3, true, 0, false, false, true, ''],
+  ['VS05', 'Làm hỏng cơ sở vật chất của trường và lớp', 'Vệ sinh - của công', 'NHO', -10, true, 0, false, false, true, 'Đền gấp 5 lần giá trị'],
+
+  // ===== I.5 Xe và giao thông =====
+  ['XE01', 'Xếp xe lộn xộn, không cùng chiều, để sai vị trí', 'Xe - giao thông', 'NHO', -3, true, 0, false, false, true, ''],
+  ['XE02', 'Xe không khoá hoặc quên chìa khoá xe', 'Xe - giao thông', 'NHO', -2, true, 0, false, false, true, ''],
+  ['XE03', 'Đi xe trong khu vực cấm đi xe của trường', 'Xe - giao thông', 'NHO', -3, true, 0, false, false, true, ''],
+  ['XE04', 'Gửi xe ngoài nhà trường', 'Xe - giao thông', 'NHO', -5, true, 0, false, false, true, ''],
+  ['XE05', 'Không đội mũ bảo hiểm khi đi xe máy / xe đạp điện', 'Xe - giao thông', 'CHUA_DAT', -20, false, 0, false, false, true, 'Xếp loại Chưa đạt tháng đó'],
+
+  // ===== I.6 Vi phạm khác =====
+  ['VP01', 'Nói tục, chửi bậy (kể cả trên mạng xã hội), đánh nhau, hút thuốc, chơi bài', 'Vi phạm khác', 'HA_BAC', -10, true, 0, false, false, true, ''],
+  ['VP02', 'Thái độ thiếu tôn trọng lớp trực tuần', 'Vi phạm khác', 'NHO', -10, true, 0, false, false, true, ''],
+  ['VP03', 'Vô lễ với cán bộ, giáo viên, nhân viên', 'Vi phạm khác', 'HA_BAC', -10, true, 0, false, false, true, ''],
+
+  // ===== II.1 Chuẩn bị bài =====
+  ['CB01', 'Không học bài, không làm bài tập ở nhà', 'Chuẩn bị bài', 'NHO', -5, false, 0, false, true, true, ''],
+  ['CB02', 'Không soạn bài đầy đủ trước khi đến lớp', 'Chuẩn bị bài', 'NHO', -5, false, 0, false, true, true, ''],
+  ['CB03', 'Thiếu sách vở, dụng cụ học tập', 'Chuẩn bị bài', 'NHO', -5, false, 0, false, true, true, ''],
+
+  // ===== II.2 Điểm kém trên lớp =====
+  ['DK01', 'Điểm kiểm tra 0 - 1', 'Điểm kém', 'NHO', -3, false, 0, false, true, true, ''],
+  ['DK02', 'Điểm kiểm tra 2 - 3', 'Điểm kém', 'NHO', -2, false, 0, false, true, true, ''],
+  ['DK03', 'Điểm kiểm tra 4 - dưới 5', 'Điểm kém', 'NHO', -1, false, 0, false, true, true, ''],
+
+  // ===== II.3.1 Chào cờ, sinh hoạt tập thể =====
+  ['SH01', 'Xếp hàng chậm, muộn', 'Chào cờ - SHTT', 'NHO', -5, false, 0, false, false, true, ''],
+  ['SH02', 'Ngồi không đúng vị trí lớp', 'Chào cờ - SHTT', 'NHO', -5, false, 0, false, false, true, ''],
+  ['SH03', 'Không nghiêm túc, làm việc riêng, nói chuyện riêng', 'Chào cờ - SHTT', 'NHO', -5, false, 0, false, false, true, 'Tài liệu không ghi rõ mức trừ - tạm để -5'],
+  ['SH04', 'Dùng điện thoại khi chưa được thầy cô cho phép', 'Chào cờ - SHTT', 'NHO', -10, false, 0, false, false, true, ''],
+
+  // ===== II.3.2 Giờ học chính khoá =====
+  ['GH01', 'Bị ghi tên trong sổ đầu bài (mất trật tự, làm việc riêng, không ghi bài)', 'Giờ học', 'NHO', -5, false, 0, true, true, true, 'Tính 1 lần ghi sổ đầu bài'],
+  ['GH02', 'Không để điện thoại vào tủ, hoặc bị phát hiện dùng điện thoại trong giờ', 'Giờ học', 'HA_BAC', -10, false, 0, false, true, true, ''],
+  ['GH03', 'Mang sách báo, máy nghe nhạc không phục vụ việc học', 'Giờ học', 'HA_BAC', -10, false, 0, false, true, true, 'Thu tang vật'],
+  ['GH04', 'Ngồi sai sơ đồ lớp khi chưa được GV bộ môn đồng ý', 'Giờ học', 'NHO', -5, false, 0, false, true, true, ''],
+  ['GH05', 'Trao đổi bài trong giờ kiểm tra', 'Giờ học', 'NHO', -5, false, 0, false, true, true, ''],
+  ['GH06', 'Mang, dùng tài liệu hoặc điện thoại trong giờ kiểm tra', 'Giờ học', 'CHUA_DAT', -10, false, 0, false, true, true, 'Thu tang vật, mời CMHS'],
+
+  // ===== III Hoạt động tập thể =====
+  ['TT01', 'Không hoàn thành nhiệm vụ (nộp giấy tờ, bài dự thi muộn...)', 'Hoạt động tập thể', 'NHO', -2, false, 0, false, false, true, ''],
+  ['TT02', 'Bỏ không tham gia hoạt động được lớp / Đoàn / trường phân công', 'Hoạt động tập thể', 'HA_BAC', -5, false, 0, false, false, true, ''],
+  ['TT03', 'Lao động: đi muộn, không chăm chỉ', 'Hoạt động tập thể', 'NHO', -3, false, 0, false, false, true, 'Phạt lao động thêm cuối buổi'],
+  ['TT04', 'Lao động: không mang dụng cụ', 'Hoạt động tập thể', 'NHO', -3, false, 0, false, false, true, 'Phạt lao động thêm cuối buổi'],
+  ['TT05', 'Bỏ lao động', 'Hoạt động tập thể', 'HA_BAC', -5, false, 0, false, false, true, 'Phạt lao động 3 buổi'],
+
+  // ===== Trường hợp ngoài dự kiến =====
+  ['KHAC', 'Lỗi khác (tự ghi nội dung và điểm trừ)', 'Khác', 'NHO', 0, false, 0, false, false, true, 'Dùng khi lỗi không có trong danh sách - người nhập tự gõ nội dung và điểm']
 ];
 
+// Điểm thưởng - mục B của tài liệu. Không giới hạn số lần.
+// Cột: Mã | Tên | NhómCha | ĐiểmCộng | CầnMôn | TrầnTuần (0 = không giới hạn) | HiệnThị | GhiChú
 const DS_CONG = [
-  ['DT08', 'Hoa điểm tốt - điểm 8', 1, true, 0, true],
-  ['DT09', 'Hoa điểm tốt - điểm 9', 2, true, 0, true],
-  ['DT10', 'Hoa điểm tốt - điểm 10', 3, true, 0, true],
-  ['DTXS', 'Điểm tốt xuất sắc (★)', 3, true, 0, true],
-  ['PB01', 'Phát biểu xây dựng bài', 1, true, 3, true],
-  ['GL01', 'Giúp việc lớp / làm thêm nhiệm vụ', 1, false, 3, true],
-  ['TT01', 'Được tuyên dương trước lớp / trước trường', 3, false, 0, true],
-  ['GT01', 'Đạt giải thi HSG, NCKH, TDTT, văn nghệ', 5, false, 0, true]
+  ['DT10', 'Điểm tốt: đạt 10', 'Điểm tốt', 3, true, 0, true, ''],
+  ['DT09', 'Điểm tốt: từ 9 đến 9.75', 'Điểm tốt', 2, true, 0, true, ''],
+  ['DT08', 'Điểm tốt: từ 8 đến 8.75', 'Điểm tốt', 1, true, 0, true, ''],
+
+  ['PB01', 'Phát biểu nhiệt tình (1-3 lần trong 1 tiết)', 'Nhiệt tình - trách nhiệm', 1, true, 0, true, ''],
+  ['HT01', 'Hỗ trợ công việc lớp, hoàn thành tốt nhiệm vụ, giúp bạn vượt khó', 'Nhiệt tình - trách nhiệm', 3, false, 0, true, 'Cộng vào điểm trung bình cuối tháng'],
+
+  ['DO01', 'Việc tốt được Đoàn trường biểu dương, khen thưởng', 'Hoạt động Đoàn', 5, false, 0, true, 'Cộng cuối tháng'],
+  ['DO02', 'Sáng tạo, đạt giải thưởng, lập thành tích đặc biệt', 'Hoạt động Đoàn', 5, false, 0, true, 'Cộng cuối tháng'],
+  ['DO03', 'Tham gia công việc chung của Đoàn', 'Hoạt động Đoàn', 3, false, 0, true, 'Cộng cuối tháng'],
+  ['DO04', 'Tham gia văn nghệ', 'Hoạt động Đoàn', 5, false, 0, true, 'Cộng cuối tháng'],
+  ['DO05', 'Đại diện lớp tham gia công tác Đoàn', 'Hoạt động Đoàn', 5, false, 0, true, 'Cộng cuối tháng'],
+
+  ['TD01', 'Lớp đứng top 3 xếp loại thi đua tuần của khối', 'Thành tích tập thể', 3, false, 0, true, 'Cộng cho cả lớp, mỗi tuần'],
+  ['TD02', 'Lớp đạt thành tích cao kỳ thi đua 20/11, 26/3 (top 5)', 'Thành tích tập thể', 5, false, 0, true, 'Cộng cho cả lớp'],
+
+  ['CB_LT', 'Cán bộ lớp: lớp trưởng, bí thư', 'Cán bộ lớp', 7, false, 0, true, 'Cộng theo tháng'],
+  ['CB_PHO', 'Cán bộ lớp: lớp phó, tổ trưởng, phó bí thư, uỷ viên BCH, thư ký', 'Cán bộ lớp', 5, false, 0, true, 'Cộng theo tháng, 3-5đ tuỳ mức độ'],
+
+  ['CONG_KHAC', 'Điểm cộng khác (tự ghi nội dung và số điểm)', 'Khác', 0, false, 0, true, 'Dùng cho trường hợp ngoài danh sách']
 ];
 
 const DS_CAUHINH = [
@@ -106,21 +150,16 @@ const DS_CAUHINH = [
   ['ResetViDauHocKy', 'TRUE', 'Xóa ví lỗi nhỏ lẻ khi sang học kỳ mới (Q1)'],
   ['GhiSo_KhongDuocTot', '3', 'Từ N lần ghi sổ đầu bài trở lên thì không được TỐT'],
   ['GhiSo_KhongDuocKha', '5', 'Từ N lần ghi sổ đầu bài trở lên thì không được KHÁ'],
-  ['DiemCoSan', '5', 'Điểm có sẵn mỗi tuần (dòng "ĐIỂM CÓ SẴN" trong sổ)'],
+  ['DiemXuatPhatTuan', '100', 'Mỗi HS bắt đầu tuần với bao nhiêu điểm (tài liệu: 100đ/tuần)'],
+  ['NguongTuan_Tot', '100', 'Từ bao nhiêu điểm trở lên và KHÔNG có lỗi nào thì xếp Tốt'],
+  ['NguongTuan_Kha', '80', 'Từ bao nhiêu điểm trở lên thì xếp Khá'],
+  ['NguongTuan_Dat', '50', 'Từ bao nhiêu điểm trở lên thì xếp Đạt, dưới mức này là Chưa đạt'],
+  ['NhanDoiTuLan2', 'TRUE', 'Lỗi nề nếp tái phạm trong cùng tuần thì nhân đôi mức trừ'],
+  ['MatKhauMacDinhHau', '1', 'Mật khẩu mặc định của phụ huynh = họ tên không dấu + ký tự này'],
+  ['HauToTenDangNhap', 'a0k67', 'Tên đăng nhập phụ huynh = họ tên không dấu + hậu tố này'],
 
-  // Điểm của từng cột trong sổ thi đua tuần. Mỗi mục ghi trong ô = 1 lượt.
-  ['Diem_CONG', '1', 'ĐIỂM CỘNG - mỗi mục'],
-  ['Diem_NHO_TRUONG', '-2', 'Lỗi nhỏ - lỗi trường'],
-  ['Diem_NHO_LOP', '-1', 'Lỗi nhỏ - lỗi lớp'],
-  ['Diem_HB_TRUONG', '-6', 'Lỗi hạ 1 bậc HK - lỗi trường'],
-  ['Diem_HB_LOP', '-2', 'Lỗi hạ 1 bậc HK - lỗi lớp'],
-  ['Diem_HK_YEU', '-12', 'Lỗi HK yếu'],
 
-  ['TuDongXepLoai', 'FALSE', 'FALSE = người nhập tự chọn xếp loại. TRUE = web tự tính theo quy chế.'],
-  ['DungDiemDeXepLoai', 'FALSE', 'Chỉ dùng khi TuDongXepLoai = TRUE'],
-  ['NguongDiem_Tot', '0', 'Chỉ dùng khi DungDiemDeXepLoai = TRUE'],
-  ['NguongDiem_Kha', '-10', 'Chỉ dùng khi DungDiemDeXepLoai = TRUE'],
-  ['NguongDiem_Dat', '-20', 'Chỉ dùng khi DungDiemDeXepLoai = TRUE'],
+  ['TuDongXepLoai', 'TRUE', 'TRUE = web tự tính xếp loại từ điểm (theo tài liệu hướng dẫn thi đua)'],
   ['CongKhaiBangLop', 'TRUE', 'Ai cũng xem được bảng lớp - cô đã chốt: không cần bảo mật'],
   ['SoNgayDuocSua', '7', 'Cán bộ lớp sửa được bản ghi trong N ngày (Q7)'],
   ['ThangHK1', '9,10,11,12,1', 'Các tháng thuộc học kỳ I (Q8)'],
@@ -140,6 +179,8 @@ function onOpen() {
     .addSeparator()
     .addItem('👤 Áp dụng tài khoản (sau khi thêm/đổi mật khẩu)', 'apDungTaiKhoan')
     .addItem('👤 Xem danh sách tài khoản', 'xemTaiKhoan')
+    .addItem('👪 Tạo tài khoản phụ huynh (41 HS)', 'taoTaiKhoanPhuHuynh')
+    .addItem('👪 In tài khoản phụ huynh để phát', 'inTaiKhoanPhuHuynh')
     .addSeparator()
     .addItem('📅 Bắt đầu năm học mới', 'batDauNamHocMoi')
     .addToUi();
@@ -237,11 +278,100 @@ function seedTaiKhoan(ss) {
   const sh = ss.getSheetByName(SHEETS.TK);
   if (sh.getLastRow() > 1) return;
   sh.getRange(2, 1, 3, SCHEMA.TaiKhoan.length).setValues([
-    ['gvcn', 'Giáo viên chủ nhiệm', '', hashMK('gvcn@2026'), 'GVCN', '', 'HOAT_DONG', 'Mật khẩu ban đầu: gvcn@2026 — nên đổi ngay'],
-    ['loptruong', 'Lớp trưởng', '', hashMK('lt@2026'), 'LOP_TRUONG', '', 'HOAT_DONG', 'Mật khẩu ban đầu: lt@2026'],
-    ['totruong1', 'Tổ trưởng tổ 1', '', hashMK('tt1@2026'), 'TO_TRUONG', 'Tổ 1', 'HOAT_DONG', 'Mật khẩu ban đầu: tt1@2026']
+    ['gvcn', 'Giáo viên chủ nhiệm', '', hashMK('gvcn@2026'), 'GVCN', '', '', false, 'HOAT_DONG', 'Mật khẩu ban đầu: gvcn@2026 — nên đổi ngay'],
+    ['loptruong', 'Lớp trưởng', '', hashMK('lt@2026'), 'LOP_TRUONG', '', '', false, 'HOAT_DONG', 'Mật khẩu ban đầu: lt@2026'],
+    ['totruong1', 'Tổ trưởng tổ 1', '', hashMK('tt1@2026'), 'TO_TRUONG', '', 'Tổ 1', false, 'HOAT_DONG', 'Mật khẩu ban đầu: tt1@2026']
   ]);
   trangTriTaiKhoan(sh);
+}
+
+/**
+ * Tạo tài khoản phụ huynh cho từng học sinh trong sheet HocSinh.
+ *
+ *   Tên đăng nhập : họ tên không dấu + hậu tố  ->  nguyenhoanganha0k67
+ *   Mật khẩu ban đầu: họ tên không dấu + "1"   ->  nguyenhoanganh1
+ *
+ * Lần đầu đăng nhập, web bắt phụ huynh đổi mật khẩu (cột LanDau = TRUE).
+ * Sau này muốn cấp lại mật khẩu mặc định cho ai thì chỉ cần đổi ô LanDau
+ * của người đó thành TRUE rồi chạy lại hàm này.
+ *
+ * Chạy lại nhiều lần được: học sinh nào đã có tài khoản thì bỏ qua.
+ */
+function taoTaiKhoanPhuHuynh() {
+  const ui = SpreadsheetApp.getUi();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const cfg = docCauHinh();
+  const hauTo = String(cfg.HauToTenDangNhap || 'a0k67');
+  const hauMK = String(cfg.MatKhauMacDinhHau || '1');
+
+  const hs = docBang(SHEETS.HS).filter(function (r) {
+    return r.MaHS && r.TrangThai === 'DANG_HOC';
+  });
+  if (!hs.length) { ui.alert('Sheet HocSinh chưa có học sinh nào.'); return; }
+
+  const sh = ss.getSheetByName(SHEETS.TK);
+  const head = SCHEMA.TaiKhoan;
+  const daCo = {}, daCoTen = {};
+  docBang(SHEETS.TK).forEach(function (r) {
+    if (r.MaHS) daCo[r.MaHS] = true;
+    if (r.TenDangNhap) daCoTen[String(r.TenDangNhap).toLowerCase()] = true;
+  });
+
+  const them = [], trung = [];
+  hs.forEach(function (h) {
+    if (daCo[h.MaHS]) return;
+    const goc = khongDau(h.HoTen);
+    if (!goc) return;
+
+    // Hai học sinh trùng họ tên -> thêm số vào cuối cho khác nhau
+    let ten = goc + hauTo, dem = 1;
+    while (daCoTen[ten]) { dem++; ten = goc + dem + hauTo; }
+    daCoTen[ten] = true;
+
+    them.push([
+      ten, 'PH ' + h.HoTen, '', hashMK(goc + hauMK), 'PHU_HUYNH',
+      h.MaHS, '', true, 'HOAT_DONG', 'Mật khẩu ban đầu: ' + goc + hauMK
+    ]);
+    if (dem > 1) trung.push(h.HoTen + ' -> ' + ten);
+  });
+
+  if (!them.length) {
+    ui.alert('Không có gì thêm', 'Tất cả học sinh đều đã có tài khoản phụ huynh.', ui.ButtonSet.OK);
+    return;
+  }
+  sh.getRange(sh.getLastRow() + 1, 1, them.length, head.length).setValues(them);
+  trangTriTaiKhoan(sh);
+  ghiLog('GVCN', 'TAO_TK_PHU_HUYNH', them.length + ' tài khoản');
+
+  ui.alert('Đã tạo ' + them.length + ' tài khoản phụ huynh',
+    'Tên đăng nhập: họ tên không dấu + "' + hauTo + '"\n' +
+    'Mật khẩu ban đầu: họ tên không dấu + "' + hauMK + '"\n\n' +
+    'Ví dụ: NGUYỄN HOÀNG ANH\n' +
+    '  đăng nhập: nguyenhoanganh' + hauTo + '\n' +
+    '  mật khẩu : nguyenhoanganh' + hauMK + '\n\n' +
+    'Lần đầu đăng nhập web sẽ bắt phụ huynh đổi mật khẩu.\n' +
+    'Muốn cấp lại mật khẩu mặc định cho ai: đổi ô LanDau của người đó thành TRUE\n' +
+    'rồi chạy lại menu này.' +
+    (trung.length ? '\n\nTrùng họ tên, đã thêm số phân biệt:\n  ' + trung.join('\n  ') : ''),
+    ui.ButtonSet.OK);
+}
+
+/** In danh sách tài khoản phụ huynh kèm mật khẩu mặc định để phát cho lớp. */
+function inTaiKhoanPhuHuynh() {
+  const cfg = docCauHinh();
+  const hauMK = String(cfg.MatKhauMacDinhHau || '1');
+  const hs = indexBy(docBang(SHEETS.HS), 'MaHS');
+  const tk = docBang(SHEETS.TK).filter(function (r) { return r.VaiTro === 'PHU_HUYNH' && r.MaHS; });
+  if (!tk.length) { SpreadsheetApp.getUi().alert('Chưa có tài khoản phụ huynh nào.'); return; }
+
+  let out = 'HỌ TÊN HỌC SINH\tTÊN ĐĂNG NHẬP\tMẬT KHẨU\tĐÃ ĐỔI MK CHƯA\n';
+  tk.forEach(function (r) {
+    const h = hs[r.MaHS];
+    const mk = laDung(r.LanDau) ? (khongDau(h ? h.HoTen : '') + hauMK) : '(phụ huynh đã đổi)';
+    out += (h ? h.HoTen : r.MaHS) + '\t' + r.TenDangNhap + '\t' + mk + '\t' +
+      (laDung(r.LanDau) ? 'chưa' : 'rồi') + '\n';
+  });
+  SpreadsheetApp.getUi().alert('Tài khoản phụ huynh', out, SpreadsheetApp.getUi().ButtonSet.OK);
 }
 
 /** Ô chọn sẵn cho cột Vai trò / Trạng thái, và hướng dẫn ngay trên sheet. */
@@ -253,12 +383,19 @@ function trangTriTaiKhoan(sh) {
   const cHash = head.indexOf('MatKhauHash') + 1;
 
   const dsVaiTro = SpreadsheetApp.newDataValidation()
-    .requireValueInList(['GVCN', 'LOP_TRUONG', 'TO_TRUONG'], true).build();
+    .requireValueInList(['GVCN', 'LOP_TRUONG', 'TO_TRUONG', 'PHU_HUYNH'], true).build();
   const dsTT = SpreadsheetApp.newDataValidation()
     .requireValueInList(['HOAT_DONG', 'KHOA'], true).build();
 
   sh.getRange(2, cVaiTro, 200, 1).setDataValidation(dsVaiTro);
   sh.getRange(2, cTT, 200, 1).setDataValidation(dsTT);
+  const cLanDau = head.indexOf('LanDau') + 1;
+  sh.getRange(2, cLanDau, 200, 1)
+    .setDataValidation(SpreadsheetApp.newDataValidation().requireCheckbox().build());
+  sh.getRange(1, cLanDau).setNote(
+    'Tích = phụ huynh chưa đổi mật khẩu, lần đăng nhập tới web sẽ bắt đổi.\n' +
+    'Muốn cấp lại mật khẩu mặc định cho ai: tích ô này rồi chạy\n' +
+    'menu ⚙️ Thi đua → "Tạo tài khoản phụ huynh".');
 
   sh.getRange(1, cMkMoi).setNote(
     'Gõ mật khẩu thường vào cột này rồi bấm menu ⚙️ Thi đua → "Áp dụng tài khoản".\n' +

@@ -114,9 +114,11 @@ const API = (function () {
 
     // ---- Cần đăng nhập: nhập liệu (POST) ----
     dangNhap: function (u, p) { return post({ action: 'dangNhap', tenDangNhap: u, matKhau: p }); },
+    doiMatKhau: function (cu, moi) { return post({ action: 'doiMatKhau', mkCu: cu, mkMoi: moi }); },
+    danhMucDayDu: function () { return get({ action: 'danhMucDayDu' }); },
+    nhatKyHS: function (maHS, maTuan) { return post({ action: 'nhatKyHS', maHS: maHS, maTuan: maTuan }); },
+    themNhatKy: function (muc) { return post({ action: 'themNhatKy', muc: muc }); },
     dsHocSinhCuaToi: function () { return post({ action: 'dsHocSinh' }); },
-    luoiTuan: function (maTuan) { return post({ action: 'luoiTuan', maTuan: maTuan }); },
-    luuLuoiTuan: function (maTuan, dong) { return post({ action: 'luuLuoiTuan', maTuan: maTuan, dong: dong }); },
     taoTuan: function (tuan) { return post({ action: 'taoTuan', tuan: tuan }); },
     suaTuan: function (maTuan, tuan) { return post({ action: 'suaTuan', maTuan: maTuan, tuan: tuan }); },
     xoaTuan: function (maTuan) { return post({ action: 'xoaTuan', maTuan: maTuan }); },
@@ -143,6 +145,6 @@ const Store = {
     try { sessionStorage.removeItem('td_' + k); } catch (e) { }
   },
   xoaHet: function () {
-    ['token', 'hoTen', 'vaiTro', 'toPhuTrach'].forEach(Store.del);
+    ['token', 'hoTen', 'vaiTro', 'toPhuTrach', 'maHS'].forEach(Store.del);
   }
 };
