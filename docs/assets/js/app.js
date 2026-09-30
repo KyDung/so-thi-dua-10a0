@@ -95,8 +95,15 @@ function dinhTuyen() {
   chuaLuu = false;
   hashDangXem = location.hash;
   const luot = ++lanHienThi;
-  const h = location.hash.replace(/^#\/?/, '') || 'bang-lop';
-  const ten = h.split('?')[0];
+  const h = location.hash.replace(/^#\/?/, '');
+  let ten = h.split('?')[0] || manHinhMacDinh();
+
+  // Vai trò nào không được vào màn nào thì đưa về trang chủ của vai trò đó,
+  // thay vì để backend trả "Không đủ quyền" rồi hiện dải đỏ.
+  if (vaiTro() && !duocVao(ten)) {
+    location.replace(location.pathname + location.search + trangChuTheoVaiTro());
+    return;
+  }
   document.querySelectorAll('nav.tabs a').forEach(function (a) {
     a.classList.toggle('on', a.getAttribute('href').split('?')[0] === '#/' + ten);
   });
@@ -108,7 +115,7 @@ function dinhTuyen() {
     'quan-tri': mhQuanTri,
     'doi-mat-khau': mhDoiMatKhau,
     'dang-nhap': mhDangNhap
-  }[ten] || manHinhMacDinh();
+  }[ten] || mhBangLop;
 
   // Chưa đăng nhập thì không xem được gì ngoài trang đăng nhập
   if (!vaiTro() && ten !== 'dang-nhap') {
@@ -122,9 +129,21 @@ function dinhTuyen() {
   capNhatNav();
 }
 
-/** Vào web thì mở màn nào: phụ huynh xem con mình, cán bộ lớp xem bảng lớp. */
+/** Vào web không kèm địa chỉ cụ thể thì mở màn nào. */
 function manHinhMacDinh() {
-  return vaiTro() === 'PHU_HUYNH' ? mhChiTiet : mhBangLop;
+  const vt = vaiTro();
+  if (!vt) return 'dang-nhap';
+  if (vt === 'PHU_HUYNH') return 'chi-tiet';
+  return vt === 'GVCN' ? 'bang-lop' : 'cham-diem';
+}
+
+/** Vai trò hiện tại có được vào màn hình này không. */
+function duocVao(ten) {
+  const vt = vaiTro();
+  if (!vt) return ten === 'dang-nhap';
+  if (vt === 'PHU_HUYNH') return ['chi-tiet', 'doi-mat-khau', 'dang-nhap'].indexOf(ten) >= 0;
+  if (ten === 'quan-tri') return vt === 'GVCN';
+  return true;
 }
 
 function trangChuTheoVaiTro() {
