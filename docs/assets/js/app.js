@@ -10,6 +10,17 @@ const NHAN = { TOT: 'TỐT', KHA: 'KHÁ', DAT: 'ĐẠT', CHUA_DAT: 'CHƯA ĐẠT
 const THANG_HOC = [9, 10, 11, 12, 1, 2, 3, 4, 5];
 
 let LOP = null, DANHMUC = null, DSHS = null, LICHTUAN = null;
+
+/**
+ * Xoá mọi thứ đang nhớ tạm trong trang.
+ *
+ * Bắt buộc gọi mỗi khi ĐỔI TÀI KHOẢN. Các biến trên sống suốt vòng đời trang,
+ * nên nếu không xoá thì đăng nhập phụ huynh (danh sách 1 người) rồi thoát ra
+ * vào lại bằng GVCN sẽ vẫn thấy đúng 1 học sinh đó.
+ */
+function xoaNhoTam() {
+  DANHMUC = null; DSHS = null; LICHTUAN = null;
+}
 let chuaLuu = false, dangLuu = false, hashDangXem = location.hash, lanHienThi = 0;
 window.addEventListener('beforeunload', function (e) {
   if (chuaLuu || dangLuu) { e.preventDefault(); e.returnValue = ''; }
@@ -169,7 +180,7 @@ function capNhatNav() {
     btn.textContent = 'Thoát (' + (Store.get('hoTen') || '') + ')';
     btn.onclick = function () {
       if (!coTheRoiTrang()) return;
-      chuaLuu = false; Store.xoaHet();
+      chuaLuu = false; Store.xoaHet(); xoaNhoTam();
       location.hash = '#/dang-nhap'; dinhTuyen();
     };
   } else {
@@ -1004,6 +1015,7 @@ async function mhDangNhap() {
     btn.disabled = true; btn.textContent = 'Đang kiểm tra…';
     try {
       const d = await API.dangNhap(q('#iU').value.trim(), q('#iP').value);
+      xoaNhoTam();                       // bỏ dữ liệu của tài khoản trước
       Store.set('token', d.token); Store.set('hoTen', d.hoTen);
       Store.set('vaiTro', d.vaiTro); Store.set('toPhuTrach', d.toPhuTrach || '');
       location.hash = d.vaiTro === 'GVCN' ? '#/bang-lop' : '#/cham-diem';
