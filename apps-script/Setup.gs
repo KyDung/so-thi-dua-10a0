@@ -595,7 +595,7 @@ function batDauNamHocMoi() {
   const banLuu = ss.copy('LUU TRU ' + cfg.Lop + ' ' + cfg.NamHoc);
 
   // 2. Dọn dữ liệu của năm cũ
-  [SHEETS.NHATKY, SHEETS.THANG, SHEETS.KY, SHEETS.LOG, SHEETS.TUAN].forEach(function (ten) {
+  [SHEETS.NHATKY, SHEETS.THANG, SHEETS.TUANXL, SHEETS.KY, SHEETS.LOG, SHEETS.TUAN].forEach(function (ten) {
     const sh = ss.getSheetByName(ten);
     if (sh && sh.getLastRow() > 1) {
       sh.getRange(2, 1, sh.getLastRow() - 1, SCHEMA[ten].length).clearContent();
@@ -616,8 +616,13 @@ function batDauNamHocMoi() {
     'Đã sao lưu năm ' + cfg.NamHoc + ' ra file:\n' + banLuu.getName() + '\n\n' +
     'File hiện tại giờ là năm ' + namMoi + ', dữ liệu đã dọn sạch.\n\n' +
     'Việc còn lại:\n' +
-    '  1. Cập nhật sheet HocSinh nếu lớp có thay đổi danh sách.\n' +
-    '  2. Vào web tab "Sổ thi đua" tạo trang tuần 1 của năm học mới.',
+    '  1. Cập nhật sheet HocSinh nếu lớp có thay đổi danh sách\n' +
+    '     (điền/xoá dòng, giữ nguyên MaHS cho HS học tiếp, HS mới thì để trống MaHS).\n' +
+    '  2. Nếu danh sách lớp đổi: menu "Sinh mã học sinh" cho HS mới,\n' +
+    '     rồi "Xoá tài khoản phụ huynh" + "Tạo tài khoản phụ huynh" để làm lại từ đầu.\n' +
+    '     (Nếu sĩ số không đổi thì bỏ qua bước này, tài khoản cũ vẫn dùng được.)\n' +
+    '  3. Sheet TaiKhoan: đổi TrangThai các tài khoản cán bộ lớp cũ (nếu đổi ban cán sự).\n' +
+    '  4. Vào web tab "Sổ thi đua" tạo trang tuần 1 của năm học mới.',
     ui.ButtonSet.OK);
 }
 
