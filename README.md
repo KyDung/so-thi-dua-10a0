@@ -201,6 +201,21 @@ không cần sửa code**.
 
 ## Kiểm thử
 
+### Chạy offline (không cần mạng)
+
+```bash
+for f in tests/test-*.js; do node "$f"; done
+```
+
+### Kiểm tra bản đang chạy thật — **chạy sau mỗi lần deploy**
+
+```bash
+node tests/kiem-tra-that.js
+```
+
+Đăng nhập bằng cả 4 vai trò và gọi hết các lệnh, xác nhận ai được làm gì.
+Đây là bộ bắt được nhiều lỗi thực tế nhất, vì nó đi đúng đường người dùng đi.
+
 ```bash
 node tests/test-xep-loai-ky.js     # 12 tình huống xếp loại học kỳ theo quy định mục II
 node tests/test-cong-don-loi.js    # cộng dồn lỗi nhỏ qua các tháng, trần ghi sổ

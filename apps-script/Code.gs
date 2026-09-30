@@ -256,6 +256,12 @@ function apiDsHocSinh(phien) {
   }
   if (phien && phien.vaiTro === 'TO_TRUONG' && phien.to) {
     hs = hs.filter(function (r) { return r.To === phien.to; });
+    // Tài khoản gán tổ nhưng chưa bạn nào thuộc tổ đó -> báo rõ, đừng để màn hình trắng
+    if (!hs.length) {
+      throw new Error('Chưa có học sinh nào thuộc "' + phien.to + '". ' +
+        'Nhờ cô chủ nhiệm điền cột "To" trong sheet HocSinh, ' +
+        'hoặc xoá ô "ToPhuTrach" của tài khoản này nếu lớp không chia tổ.');
+    }
   }
   return hs.map(function (r) { return { maHS: r.MaHS, hoTen: r.HoTen, to: r.To, chucVu: r.ChucVu }; });
 }
