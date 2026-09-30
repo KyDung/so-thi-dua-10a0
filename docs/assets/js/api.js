@@ -104,18 +104,20 @@ const API = (function () {
   }
 
   return {
-    // ---- Ai cũng xem được (GET/JSONP, không cần đăng nhập) ----
+    // ---- Không cần đăng nhập: chỉ tên lớp cho trang đăng nhập ----
     thongTinLop: function () { return get({ action: 'thongTinLop' }); },
-    danhMuc: function () { return get({ action: 'danhMuc' }); },
-    lichTuan: function () { return get({ action: 'lichTuan' }); },
-    dsHocSinh: function () { return get({ action: 'dsHocSinh' }); },
-    bangLop: function (thang) { return get({ action: 'bangLop', thang: thang }); },
-    chiTietHS: function (maHS) { return get({ action: 'chiTietHS', maHS: maHS }); },
+
+    // ---- Xem dữ liệu: gửi kèm token nên dùng POST ----
+    danhMuc: function () { return post({ action: 'danhMuc' }); },
+    lichTuan: function () { return post({ action: 'lichTuan' }); },
+    dsHocSinh: function () { return post({ action: 'dsHocSinh' }); },
+    bangLop: function (thang) { return post({ action: 'bangLop', thang: thang }); },
+    chiTietHS: function (maHS) { return post({ action: 'chiTietHS', maHS: maHS }); },
 
     // ---- Cần đăng nhập: nhập liệu (POST) ----
     dangNhap: function (u, p) { return post({ action: 'dangNhap', tenDangNhap: u, matKhau: p }); },
     doiMatKhau: function (cu, moi) { return post({ action: 'doiMatKhau', mkCu: cu, mkMoi: moi }); },
-    danhMucDayDu: function () { return get({ action: 'danhMucDayDu' }); },
+    danhMucDayDu: function () { return post({ action: 'danhMucDayDu' }); },
     nhatKyHS: function (maHS, maTuan) { return post({ action: 'nhatKyHS', maHS: maHS, maTuan: maTuan }); },
     themNhatKy: function (muc) { return post({ action: 'themNhatKy', muc: muc }); },
     dsHocSinhCuaToi: function () { return post({ action: 'dsHocSinh' }); },

@@ -160,7 +160,7 @@ const DS_CAUHINH = [
 
 
   ['TuDongXepLoai', 'TRUE', 'TRUE = web tự tính xếp loại từ điểm (theo tài liệu hướng dẫn thi đua)'],
-  ['CongKhaiBangLop', 'TRUE', 'Ai cũng xem được bảng lớp - cô đã chốt: không cần bảo mật'],
+  ['BatBuocDangNhap', 'TRUE', 'TRUE = phải đăng nhập mới xem được. Phụ huynh chỉ thấy con mình.'],
   ['SoNgayDuocSua', '7', 'Cán bộ lớp sửa được bản ghi trong N ngày (Q7)'],
   ['ThangHK1', '9,10,11,12,1', 'Các tháng thuộc học kỳ I (Q8)'],
   ['ThangHK2', '2,3,4,5', 'Các tháng thuộc học kỳ II (Q8)'],

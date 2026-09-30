@@ -7,7 +7,7 @@
 <meta name="description" content="Trang theo dõi thi đua và kết quả rèn luyện của lớp, dành cho học sinh, phụ huynh và cán bộ lớp.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏅</text></svg>">
-<link rel="stylesheet" href="assets/css/style.css?v=8">
+<link rel="stylesheet" href="assets/css/style.css?v=9">
 </head>
 <body>
 
@@ -21,9 +21,9 @@
     <button id="btnPhien" class="sm">Đăng nhập</button>
   </div>
   <nav class="tabs">
-    <a href="#/bang-lop" class="on">Bảng lớp</a>
-    <a href="#/chi-tiet">Chi tiết học sinh</a>
-    <a href="#/thi-dua">Xếp hạng thi đua</a>
+    <a href="#/bang-lop" class="on" data-canQuyen style="display:none">Bảng lớp</a>
+    <a href="#/chi-tiet" data-daDangNhap style="display:none">Chi tiết</a>
+    <a href="#/thi-dua" data-canQuyen style="display:none">Xếp hạng</a>
     <a href="#/cham-diem" data-canQuyen style="display:none">Sổ thi đua</a>
     <a href="#/quan-tri" data-gvcn style="display:none">Quản trị</a>
     <a href="#/doi-mat-khau" data-doiMK style="display:none">Đổi mật khẩu</a>
@@ -40,8 +40,8 @@
   Khi có chênh lệch, đối chiếu sổ chính với cán bộ lớp hoặc giáo viên chủ nhiệm.
 </div>
 
-<script src="assets/js/config.js?v=8"></script>
-<script src="assets/js/api.js?v=8"></script>
-<script src="assets/js/app.js?v=8"></script>
+<script src="assets/js/config.js?v=9"></script>
+<script src="assets/js/api.js?v=9"></script>
+<script src="assets/js/app.js?v=9"></script>
 </body>
 </html>

@@ -13,6 +13,10 @@ Mọi việc quản lý đều làm trong **Google Sheet** (file `DB-ThiDua-10A0
 | `gvcn` | `gvcn@2026` | GVCN | Tất cả: ghi nhật ký, xếp loại, chốt tháng, xuất Excel |
 | `loptruong` | `lt@2026` | Lớp trưởng | Ghi nhật ký cả lớp + xếp loại tháng |
 | `totruong1` | `tt1@2026` | Tổ trưởng | Ghi nhật ký cho tổ mình phụ trách |
+| *(41 tài khoản)* | *(xem mục In tài khoản)* | Phụ huynh | **Chỉ xem kết quả của con mình** |
+
+> **Web bắt buộc đăng nhập.** Người ngoài mở link chỉ thấy trang đăng nhập, không
+> xem được tên hay kết quả của học sinh nào.
 
 > **Đổi mật khẩu `gvcn` ngay sau khi cài.** Cách đổi ở mục dưới.
 
@@ -121,7 +125,7 @@ không ảnh hưởng gì đến dữ liệu gốc.
 | Sau khi rà xong | Cô | Web → *Quản trị* → **Chốt tháng** (khoá lại, cán bộ lớp hết sửa được) |
 | Khi cần nộp | Cô | Web → *Quản trị* → **Xuất file Excel** |
 
-Phụ huynh không phải làm gì — mở link là xem được.
+Phụ huynh đăng nhập bằng tài khoản cô phát, chỉ xem được kết quả của con mình.
 
 ---
 

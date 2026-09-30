@@ -108,33 +108,53 @@ function dinhTuyen() {
     'quan-tri': mhQuanTri,
     'doi-mat-khau': mhDoiMatKhau,
     'dang-nhap': mhDangNhap
-  }[ten] || mhBangLop;
+  }[ten] || manHinhMacDinh();
+
+  // Chưa đăng nhập thì không xem được gì ngoài trang đăng nhập
+  if (!vaiTro() && ten !== 'dang-nhap') {
+    capNhatNav();
+    mhDangNhap().catch(function (e) { if (luot === lanHienThi) loi(e); });
+    window.scrollTo(0, 0);
+    return;
+  }
   mh().catch(function (e) { if (luot === lanHienThi) loi(e); });
   window.scrollTo(0, 0);
   capNhatNav();
 }
 
+/** Vào web thì mở màn nào: phụ huynh xem con mình, cán bộ lớp xem bảng lớp. */
+function manHinhMacDinh() {
+  return vaiTro() === 'PHU_HUYNH' ? mhChiTiet : mhBangLop;
+}
+
+function trangChuTheoVaiTro() {
+  if (vaiTro() === 'PHU_HUYNH') {
+    return '#/chi-tiet?ma=' + encodeURIComponent(Store.get('maHS') || '');
+  }
+  return vaiTro() === 'GVCN' ? '#/bang-lop' : '#/cham-diem';
+}
+
 function capNhatNav() {
-  const laPH = vaiTro() === 'PHU_HUYNH';
-  document.querySelectorAll('[data-canQuyen]').forEach(function (a) {
-    a.style.display = (vaiTro() && !laPH) ? '' : 'none';
-  });
-  document.querySelectorAll('[data-doiMK]').forEach(function (a) {
-    a.style.display = vaiTro() ? '' : 'none';
-  });
-  document.querySelectorAll('[data-gvcn]').forEach(function (a) {
-    a.style.display = vaiTro() === 'GVCN' ? '' : 'none';
-  });
+  const vt = vaiTro();
+  const laPH = vt === 'PHU_HUYNH';
+  const hien = function (chon, dk) {
+    document.querySelectorAll(chon).forEach(function (a) { a.style.display = dk ? '' : 'none'; });
+  };
+  hien('[data-daDangNhap]', !!vt);              // Chi tiết: ai đăng nhập cũng thấy
+  hien('[data-canQuyen]', !!vt && !laPH);       // Bảng lớp, Xếp hạng, Sổ thi đua
+  hien('[data-doiMK]', !!vt);
+  hien('[data-gvcn]', vt === 'GVCN');
+
   const btn = document.getElementById('btnPhien');
-  if (vaiTro()) {
+  if (vt) {
     btn.textContent = 'Thoát (' + (Store.get('hoTen') || '') + ')';
     btn.onclick = function () {
       if (!coTheRoiTrang()) return;
       chuaLuu = false; Store.xoaHet();
-      if (location.hash === '#/bang-lop') dinhTuyen(); else location.hash = '#/bang-lop';
+      location.hash = '#/dang-nhap'; dinhTuyen();
     };
   } else {
-    btn.textContent = 'Cán bộ lớp';
+    btn.textContent = 'Đăng nhập';
     btn.onclick = function () { location.hash = '#/dang-nhap'; };
   }
 }
@@ -926,11 +946,7 @@ async function mhDoiMatKhau() {
       mkCuTamThoi = '';
       const vt = vaiTro();
       el.innerHTML = '<div class="msg ok">Đã đổi mật khẩu. Lần sau đăng nhập bằng mật khẩu mới.</div>';
-      setTimeout(function () {
-        if (vt === 'PHU_HUYNH') location.hash = '#/chi-tiet?ma=' + encodeURIComponent(Store.get('maHS') || '');
-        else location.hash = vt === 'GVCN' ? '#/bang-lop' : '#/cham-diem';
-        dinhTuyen();
-      }, 1200);
+      setTimeout(function () { location.hash = trangChuTheoVaiTro(); dinhTuyen(); }, 1200);
     } catch (e) {
       bao(e.message);
       btn.disabled = false; btn.textContent = 'Đổi mật khẩu';
@@ -942,10 +958,17 @@ async function mhDoiMatKhau() {
 async function mhDangNhap() {
   el.innerHTML = `
     <div class="card" style="max-width:420px;margin:0 auto">
-      <h2>Đăng nhập cán bộ lớp</h2>
-      <p class="hint">Chỉ cần đăng nhập khi <strong>nhập điểm</strong>.
-        Xem kết quả thì không cần — quay lại <a href="#/bang-lop">bảng lớp</a>.
-</p>
+      <h2>Đăng nhập</h2>
+      <p class="hint">Sổ theo dõi này chỉ dành cho lớp, cần đăng nhập mới xem được.</p>
+      <details class="qa" style="margin-bottom:14px">
+        <summary>Phụ huynh đăng nhập thế nào?</summary>
+        <p style="margin:8px 0 0">Tên đăng nhập và mật khẩu do cô chủ nhiệm phát.
+          Tên đăng nhập là <strong>họ tên con viết liền không dấu</strong> kèm đuôi lớp —
+          ví dụ <code>nguyenvanana0k67</code>.</p>
+        <p style="margin:8px 0 0">Lần đầu vào, web sẽ yêu cầu đổi sang mật khẩu riêng của mình.
+          Mỗi phụ huynh chỉ xem được kết quả của con mình.</p>
+        <p style="margin:8px 0 0">Quên mật khẩu thì nhắn cô chủ nhiệm cấp lại.</p>
+      </details>
       <form id="fDN">
         <label class="f">Tên đăng nhập</label>
         <input id="iU" autocomplete="username" required>

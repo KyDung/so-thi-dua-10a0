@@ -40,18 +40,21 @@ function doPost(e) {
 
 function xuLy(action, p, phien) {
   switch (action) {
-    // ---------- Ai cũng xem được, không cần đăng nhập ----------
+    // ---------- Không cần đăng nhập ----------
+    // Chỉ tên lớp / trường, để trang đăng nhập hiện được tiêu đề. Không có dữ liệu học sinh.
     case 'thongTinLop':   return apiThongTinLop();
-    case 'danhMuc':       return apiDanhMuc();
-    case 'lichTuan':      return apiLichTuan();
-    case 'dsHocSinh':     return apiDsHocSinh(phien);
-    case 'bangLop':       return apiBangLop(p.thang);
-    case 'chiTietHS':     return apiChiTietHS(p.maHS);
-    case 'bangXepHangTo': return apiBangXepHangTo(p.maTuan);
+
+    // ---------- Xem dữ liệu: phải đăng nhập ----------
+    // Phụ huynh chỉ xem được con mình, kiểm tra bên trong từng hàm.
+    case 'danhMuc':       canQuyen(phien, ['TO_TRUONG', 'LOP_TRUONG', 'GVCN']); return apiDanhMuc();
+    case 'lichTuan':      canQuyen(phien, ['PHU_HUYNH', 'TO_TRUONG', 'LOP_TRUONG', 'GVCN']); return apiLichTuan();
+    case 'dsHocSinh':     return apiDsHocSinh(canQuyen(phien, ['PHU_HUYNH', 'TO_TRUONG', 'LOP_TRUONG', 'GVCN']));
+    case 'bangLop':       return apiBangLop(canQuyen(phien, ['TO_TRUONG', 'LOP_TRUONG', 'GVCN']), p.thang);
+    case 'chiTietHS':     return apiChiTietHS(canQuyen(phien, ['PHU_HUYNH', 'TO_TRUONG', 'LOP_TRUONG', 'GVCN']), p.maHS);
 
     // ---------- Cần đăng nhập: nhập liệu ----------
     case 'dangNhap':      return apiDangNhap(p.tenDangNhap, p.matKhau);
-    case 'danhMucDayDu':  return apiDanhMucDayDu();
+    case 'danhMucDayDu':  canQuyen(phien, ['TO_TRUONG', 'LOP_TRUONG', 'GVCN']); return apiDanhMucDayDu();
     case 'doiMatKhau':    return apiDoiMatKhau(canQuyen(phien, ['PHU_HUYNH', 'TO_TRUONG', 'LOP_TRUONG', 'GVCN']), p.mkCu, p.mkMoi);
     case 'nhatKyHS':      return apiNhatKyHS(canQuyen(phien, ['TO_TRUONG', 'LOP_TRUONG', 'GVCN']), p.maHS, p.maTuan);
     case 'themNhatKy':    return apiThemNhatKy(canQuyen(phien, ['TO_TRUONG', 'LOP_TRUONG', 'GVCN']), p.muc);
@@ -76,42 +79,11 @@ function xuLy(action, p, phien) {
 function apiThongTinLop() {
   const cfg = docCauHinh();
   const hs = docBang(SHEETS.HS).filter(function (r) { return r.TrangThai === 'DANG_HOC'; });
-  const to = {};
-  hs.forEach(function (h) { to[h.To] = (to[h.To] || 0) + 1; });
   return {
     truong: cfg.Truong, lop: cfg.Lop, namHoc: cfg.NamHoc,
     siSo: hs.length,
-    to: Object.keys(to).sort().map(function (k) { return { ten: k, siSo: to[k] }; }),
-    congKhaiBangLop: String(cfg.CongKhaiBangLop).toUpperCase() === 'TRUE',
     tuanHienTai: tuanMoiNhat()
   };
-}
-
-function apiBangXepHangTo(maTuan) {
-  const cfg = docCauHinh();
-  const diemCoSan = 0;   // mô hình mới: điểm xuất phát tính theo từng HS, không cộng cho tổ
-  const hs = indexBy(docBang(SHEETS.HS), 'MaHS');
-  const tuan = maTuan || (tuanCuaNgay(new Date()) || {}).MaTuan;
-
-  const diemTo = {};
-  Object.keys(hs).forEach(function (m) {
-    const t = hs[m].To;
-    if (t && diemTo[t] === undefined) diemTo[t] = 0;
-  });
-
-  docBang(SHEETS.NHATKY).forEach(function (r) {
-    if (r.TrangThai !== 'HOAT_DONG' || r.MaTuan !== tuan) return;
-    const h = hs[r.MaHS];
-    if (!h || !h.To) return;
-    diemTo[h.To] = (diemTo[h.To] || 0) + (Number(r.Diem) || 0);
-  });
-
-  const ds = Object.keys(diemTo).sort().map(function (t) {
-    return { to: t, diemHS: diemTo[t], diemCoSan: diemCoSan, tong: diemTo[t] + diemCoSan };
-  });
-  ds.sort(function (a, b) { return b.tong - a.tong; });
-  ds.forEach(function (x, i) { x.hang = i + 1; });
-  return { maTuan: tuan, bang: ds };
 }
 
 function apiDanhMuc() {
@@ -134,7 +106,12 @@ function apiLichTuan() {
 
 // =============== CHI TIẾT 1 HỌC SINH (ai cũng xem được) ===============
 
-function apiChiTietHS(maHS) {
+function apiChiTietHS(phien, maHS) {
+  // Phụ huynh chỉ được xem đúng con mình
+  if (phien.vaiTro === 'PHU_HUYNH') {
+    if (!phien.maHS) throw new Error('Tài khoản chưa gắn với học sinh nào. Nhờ cô chủ nhiệm kiểm tra lại.');
+    maHS = phien.maHS;
+  }
   const hs = docBang(SHEETS.HS).filter(function (r) { return r.MaHS === maHS; })[0];
   if (!hs) throw new Error('Không tìm thấy học sinh');
 
@@ -274,6 +251,9 @@ function kiemTraTo(phien) {
 function apiDsHocSinh(phien) {
   kiemTraTo(phien);
   let hs = docBang(SHEETS.HS).filter(function (r) { return r.TrangThai === 'DANG_HOC'; });
+  if (phien && phien.vaiTro === 'PHU_HUYNH') {
+    hs = hs.filter(function (r) { return r.MaHS === phien.maHS; });
+  }
   if (phien && phien.vaiTro === 'TO_TRUONG' && phien.to) {
     hs = hs.filter(function (r) { return r.To === phien.to; });
   }
@@ -674,7 +654,7 @@ function apiLuuXepLoai(phien, items) {
   return { soBanGhi: items.length };
 }
 
-function apiBangLop(thang) {
+function apiBangLop(phien, thang) {
   const hs = docBang(SHEETS.HS).filter(function (r) { return r.TrangThai === 'DANG_HOC'; });
   const bang = {};
   docBang(SHEETS.THANG).forEach(function (r) { bang[r.MaHS + '|' + r.Thang] = r; });
