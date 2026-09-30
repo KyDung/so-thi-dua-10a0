@@ -181,6 +181,7 @@ function onOpen() {
     .addItem('👤 Xem danh sách tài khoản', 'xemTaiKhoan')
     .addItem('👪 Tạo tài khoản phụ huynh (41 HS)', 'taoTaiKhoanPhuHuynh')
     .addItem('👪 In tài khoản phụ huynh để phát', 'inTaiKhoanPhuHuynh')
+    .addItem('👪 Xoá hết tài khoản phụ huynh', 'xoaTaiKhoanPhuHuynh')
     .addSeparator()
     .addItem('📅 Bắt đầu năm học mới', 'batDauNamHocMoi')
     .addToUi();
@@ -190,16 +191,7 @@ function khoiTaoDatabase() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   ss.setSpreadsheetTimeZone('Asia/Ho_Chi_Minh');
 
-  Object.keys(SCHEMA).forEach(function (ten) {
-    let sh = ss.getSheetByName(ten);
-    if (!sh) sh = ss.insertSheet(ten);
-    if (sh.getLastRow() === 0) {
-      const head = SCHEMA[ten];
-      sh.getRange(1, 1, 1, head.length).setValues([head])
-        .setFontWeight('bold').setBackground('#1f3864').setFontColor('#ffffff');
-      sh.setFrozenRows(1);
-    }
-  });
+  const doiCauTruc = capNhatCauTruc(ss);
 
   // Ép cột giá trị/ngày về dạng văn bản, nếu không Sheets tự đổi "2026-09-05"
   // thành kiểu Ngày và code đọc ra sai.
@@ -214,7 +206,9 @@ function khoiTaoDatabase() {
   trangTriTaiKhoan(ss.getSheetByName(SHEETS.TK));
 
   SpreadsheetApp.getUi().alert(
-    'Đã tạo xong cấu trúc database.\n\n' +
+    'Đã tạo xong cấu trúc database.\n' +
+    (doiCauTruc.length ? '\nĐÃ CẬP NHẬT CẤU TRÚC:\n  ' + doiCauTruc.join('\n  ') + '\n' : '') +
+    '\n' +
     'CÁC BƯỚC TIẾP THEO:\n\n' +
     '1. Mở sheet "HocSinh", dán danh sách họ tên vào cột B (HoTen), mỗi bạn 1 dòng.\n' +
     '   (Copy cột "Họ tên" từ file Excel của trường là nhanh nhất.)\n\n' +
@@ -228,6 +222,103 @@ function khoiTaoDatabase() {
     'bấm "Tạo trang tuần mới" và điền tuần mấy, từ ngày đến ngày — giống như\n' +
     'mở một trang mới trong sổ giấy. Tuần nghỉ Tết thì chỉ việc không tạo trang.'
   );
+}
+
+/**
+ * Tạo sheet còn thiếu và cập nhật cấu trúc cột cho khớp SCHEMA.
+ *
+ * Khi thêm / bớt / đổi thứ tự cột, dữ liệu cũ phải được xếp lại theo TÊN CỘT
+ * chứ không theo vị trí. Trước đây chỉ ghi tiêu đề khi sheet trống, nên sheet
+ * đã có dữ liệu thì giữ nguyên tiêu đề cũ -> ghi dữ liệu mới vào là lệch cột.
+ *
+ * Trả về danh sách mô tả những gì đã đổi, để báo lại cho người dùng.
+ */
+function capNhatCauTruc(ss) {
+  const doi = [];
+
+  Object.keys(SCHEMA).forEach(function (ten) {
+    const head = SCHEMA[ten];
+    let sh = ss.getSheetByName(ten);
+
+    if (!sh) {
+      sh = ss.insertSheet(ten);
+      datTieuDe(sh, head);
+      doi.push(ten + ': tạo mới');
+      return;
+    }
+
+    const soCotCu = Math.max(sh.getLastColumn(), 1);
+    const headCu = sh.getRange(1, 1, 1, soCotCu).getValues()[0]
+      .map(function (x) { return String(x).trim(); });
+
+    // Đã khớp thì thôi
+    if (headCu.length === head.length && head.every(function (c, i) { return headCu[i] === c; })) {
+      return;
+    }
+
+    const soDong = sh.getLastRow() - 1;
+    const cu = soDong > 0 ? sh.getRange(2, 1, soDong, soCotCu).getValues() : [];
+
+    // Xếp lại từng dòng theo TÊN cột, cột mới thì để trống
+    const moi = cu.map(function (r) {
+      const o = {};
+      headCu.forEach(function (c, i) { if (c) o[c] = r[i]; });
+      return head.map(function (c) { return o[c] !== undefined ? o[c] : ''; });
+    }).filter(function (r) {
+      return r.some(function (x) { return String(x).trim() !== ''; });   // bỏ dòng rỗng
+    });
+
+    sh.clear();
+    datTieuDe(sh, head);
+    if (moi.length) sh.getRange(2, 1, moi.length, head.length).setValues(moi);
+
+    const themCot = head.filter(function (c) { return headCu.indexOf(c) < 0; });
+    const botCot = headCu.filter(function (c) { return c && head.indexOf(c) < 0; });
+    doi.push(ten + ': ' + moi.length + ' dòng' +
+      (themCot.length ? ', thêm cột ' + themCot.join(', ') : '') +
+      (botCot.length ? ', bỏ cột ' + botCot.join(', ') : ''));
+  });
+
+  if (doi.length) ghiLog('HE_THONG', 'CAP_NHAT_CAU_TRUC', doi.join(' | '));
+  return doi;
+}
+
+function datTieuDe(sh, head) {
+  sh.getRange(1, 1, 1, head.length).setValues([head])
+    .setFontWeight('bold').setBackground('#1f3864').setFontColor('#ffffff');
+  sh.setFrozenRows(1);
+}
+
+/**
+ * Xoá hết tài khoản phụ huynh để tạo lại từ đầu.
+ * Dùng khi danh sách lớp đổi, hoặc khi tài khoản bị lỗi cần làm lại.
+ */
+function xoaTaiKhoanPhuHuynh() {
+  const ui = SpreadsheetApp.getUi();
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEETS.TK);
+  const head = SCHEMA.TaiKhoan;
+  const n = sh.getLastRow() - 1;
+  if (n <= 0) { ui.alert('Sheet TaiKhoan đang trống.'); return; }
+
+  const iVaiTro = head.indexOf('VaiTro');
+  const vals = sh.getRange(2, 1, n, head.length).getValues();
+  const giuLai = vals.filter(function (r) {
+    return String(r[0]).trim() && r[iVaiTro] !== 'PHU_HUYNH';
+  });
+  const soXoa = n - giuLai.length;
+  if (!soXoa) { ui.alert('Không có tài khoản phụ huynh nào để xoá.'); return; }
+
+  if (ui.alert('Xoá tài khoản phụ huynh',
+    'Xoá ' + soXoa + ' tài khoản phụ huynh?\n\n' +
+    'Giữ lại ' + giuLai.length + ' tài khoản cán bộ lớp / GVCN.\n' +
+    'Sau đó bấm "Tạo tài khoản phụ huynh" để tạo lại.',
+    ui.ButtonSet.YES_NO) !== ui.Button.YES) return;
+
+  sh.getRange(2, 1, n, head.length).clearContent();
+  if (giuLai.length) sh.getRange(2, 1, giuLai.length, head.length).setValues(giuLai);
+  trangTriTaiKhoan(sh);
+  ghiLog('GVCN', 'XOA_TK_PHU_HUYNH', soXoa + ' tài khoản');
+  ui.alert('Đã xoá ' + soXoa + ' tài khoản phụ huynh. Giờ bấm "Tạo tài khoản phụ huynh" để tạo lại.');
 }
 
 /**

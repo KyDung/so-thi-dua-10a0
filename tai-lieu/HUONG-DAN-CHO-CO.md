@@ -204,3 +204,5 @@ Mọi thay đổi **có hiệu lực ngay**, không cần deploy lại, không c
 | Sheet `NhatKy` có nhiều dòng `DA_THAY` lạ | Bình thường — đó là bản cũ mỗi lần sửa sổ, web không đọc. Nhiều quá thì bấm **⚙️ Thi đua → 🧹 Dọn lịch sử sửa đổi** |
 | Web chạy chậm dần sau vài tháng | Bấm **🧹 Dọn lịch sử sửa đổi** (nên làm mỗi học kỳ một lần) |
 | Sửa code xong web không đổi | Phải **Triển khai → Quản lý bản triển khai → sửa → Phiên bản mới** |
+| Đăng nhập báo sai mật khẩu dù gõ đúng | Chạy **⚙️ Thi đua → Khởi tạo database** (tự xếp lại cột nếu cấu trúc đã đổi) |
+| Tài khoản phụ huynh lỗi, muốn làm lại | **👪 Xoá hết tài khoản phụ huynh** rồi **👪 Tạo tài khoản phụ huynh** |
