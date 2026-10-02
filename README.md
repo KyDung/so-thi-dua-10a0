@@ -1,297 +1,179 @@
 # Sổ điện tử theo dõi thi đua – hạnh kiểm lớp 10A0-K67
 
-🔗 **Web đang chạy: https://kydung.github.io/so-thi-dua-10a0/**
+Web tĩnh + **Firebase** (Authentication + Firestore) làm backend và cơ sở dữ liệu.
+Chạy được trên gói **Spark (miễn phí)**, không cần máy chủ, không cần Cloud Functions, không cần build.
 
-Web tĩnh trên GitHub Pages + Google Apps Script làm backend + Google Sheet làm database.
-Chi phí: **0 đồng**, không cần máy chủ.
-
-Mục đích: cán bộ lớp **chép lại lỗi và điểm cộng/trừ từ sổ chính** để phụ huynh
-tiện theo dõi. Khi có chênh lệch, đối chiếu sổ chính. Xếp loại nhập theo kết quả
-đã thống nhất với GVCN; các phép tính và gợi ý trên web chỉ hỗ trợ theo dõi.
-
-### Cập nhật bản sửa ngày 29/09/2026
-
-1. Thay nội dung **Code.gs** và **XepLoai.gs** trong dự án Apps Script hiện có.
-2. Triển khai → Quản lý các bản triển khai → sửa → **Phiên bản mới**. Giữ URL `/exec` cũ.
-3. Cập nhật thư mục `docs/` lên GitHub Pages, sau đó tải lại trang và đăng nhập lại.
-
-Không chạy lại khởi tạo database hoặc bắt đầu năm học mới. Không cần đổi cấu trúc Sheet.
-Bản này thêm kiểm tra phiên bản từng dòng để tránh ghi đè khi nhiều người nhập;
-cần cập nhật backend trước frontend. Các kiểm thử dùng dữ liệu giả, chưa ghi thử trên Sheet thật.
+Mục đích: cán bộ lớp **chép lại lỗi và điểm cộng/trừ từ sổ chính** để phụ huynh tiện theo dõi.
+Khi có chênh lệch, đối chiếu sổ chính. Xếp loại nhập theo kết quả đã thống nhất với GVCN;
+các phép tính và gợi ý trên web chỉ hỗ trợ theo dõi.
 
 ```
-GitHub Pages (docs/)  ──JSONP / POST──►  Apps Script  ──►  Google Sheet
- Phụ huynh, học sinh xem                  doGet/doPost        10 sheet dữ liệu
- Cán bộ lớp chấm hằng ngày
+Trình duyệt (docs/)  ──Firebase JS SDK──►  Firebase Auth   (tài khoản, mật khẩu)
+ phụ huynh xem                         └─►  Firestore       (dữ liệu, kiểm soát bằng firestore.rules)
+ cán bộ lớp ghi sổ
  GVCN duyệt, chốt tháng, xuất Excel
 ```
 
+> **Đã chuyển từ Google Sheet + Apps Script sang Firebase.** Mã Apps Script cũ đã được gỡ khỏi
+> repo (vẫn xem được trong lịch sử git). Dữ liệu cũ trong Google Sheet **không tự chuyển sang**;
+> với lớp mới/năm học mới thì không cần, xem mục [Chuyển dữ liệu cũ](#chuyển-dữ-liệu-cũ).
+
 ---
 
-## Cài đặt bản thật
+## Cài đặt (khoảng 10 phút)
 
-### Bước 1 — Tạo Google Sheet và dán code
+### Bước 1 — Tạo dự án Firebase
 
-1. Tạo một Google Sheet mới, đặt tên `DB-ThiDua-10A0`.
-2. `Tiện ích mở rộng` → `Apps Script`.
-3. Xóa file `Code.gs` mặc định. Tạo 4 file và dán nội dung tương ứng từ thư mục
-   [apps-script/](apps-script/):
-   - `Setup.gs`
-   - `Helper.gs`
-   - `XepLoai.gs`
-   - `Code.gs`
-4. Bấm **Lưu**, rồi tải lại trang Google Sheet.
+1. Vào <https://console.firebase.google.com> → **Tạo dự án** (tắt Google Analytics cũng được).
+2. **Build → Authentication → Bắt đầu → Sign-in method** → bật **Email/Mật khẩu**.
+   (Web dùng "email giả" dạng `tendangnhap@so-thi-dua.local`; người dùng chỉ thấy tên đăng nhập.)
+3. **Build → Firestore Database → Tạo cơ sở dữ liệu** → chọn vùng `asia-southeast1` (Singapore) → chế độ **production**.
 
-### Bước 2 — Khởi tạo database và nhập danh sách lớp
+### Bước 2 — Dán quy tắc bảo mật
 
-Trên thanh menu của Sheet sẽ xuất hiện mục **⚙️ Thi đua** → bấm **Khởi tạo database**.
+**Firestore → Rules** → xoá nội dung cũ, dán toàn bộ file [firestore.rules](firestore.rules) → **Publish**.
 
-Lần đầu Google sẽ hỏi cấp quyền: chọn tài khoản → `Nâng cao` → `Chuyển đến ... (không an toàn)`
-→ `Cho phép`. (Cảnh báo này là bình thường với script tự viết, chưa qua kiểm duyệt của Google.)
+> Đây là bước quan trọng nhất: rules là "người gác cổng" thật sự của dữ liệu (phụ huynh chỉ đọc
+> được con mình, tổ trưởng chỉ ghi được tổ mình, tháng đã chốt thì khoá…). Không dán rules thì
+> Firestore ở chế độ production sẽ **từ chối tất cả**, web không chạy được.
 
-Xong sẽ có 10 sheet với đầy đủ danh mục lỗi, danh mục điểm cộng và lịch tuần.
+### Bước 3 — Nối web với Firebase
 
-Tiếp theo, nhập danh sách lớp:
+**Cài đặt dự án (⚙) → Chung → Ứng dụng của bạn → biểu tượng Web `</>`** → đặt tên bất kỳ → copy đối tượng
+`firebaseConfig` dán vào [docs/assets/js/config.js](docs/assets/js/config.js), thay các giá trị `PASTE_…`.
 
-1. Mở sheet `HocSinh`, dán họ tên vào **cột B (HoTen)**, mỗi bạn một dòng.
-   (Copy cột "Họ tên" từ file Excel của trường là nhanh nhất.)
-2. Menu **⚙️ Thi đua** → **Sinh mã học sinh**. Hệ thống tự điền mã học sinh và tổ tạm.
+Các giá trị đó **không phải bí mật** (ai mở web cũng thấy). Bảo mật nằm ở `firestore.rules`.
 
-> Danh sách học sinh **cố ý không có trong code**. Xem mục
-> [Quyền riêng tư](#-quyền-riêng-tư-đọc-trước-khi-push) bên dưới.
+### Bước 4 — Đưa web lên mạng
 
-### Bước 3 — Sửa lại dữ liệu cho đúng thực tế
+Chọn một trong hai:
 
-| Sheet | Việc cần làm |
-|---|---|
-| `HocSinh` | Điền cột **ChucVu** (lớp trưởng / tổ trưởng). Cột **To** để trống cũng được — chỉ cần nếu lớp có thi đua theo tổ. |
-| `TaiKhoan` | Đổi mật khẩu mặc định — xem bước 3b |
-| `CauHinh` | Chỉnh các ngưỡng sau khi hỏi cô (xem [tai-lieu/CAU-HOI-CHO-CO.md](tai-lieu/CAU-HOI-CHO-CO.md)) |
-| `DanhMucLoi` | Thêm/bớt lỗi, sửa điểm trừ và nhóm lỗi |
+- **GitHub Pages** (như trước): đẩy repo lên GitHub, *Settings → Pages → nhánh `main`, thư mục `/docs`*.
+- **Firebase Hosting**: `npm i -g firebase-tools` → `firebase login` → `firebase init hosting` (chọn thư mục `docs`, KHÔNG ghi đè `index.html`) → `firebase deploy`.
 
-**3b. Đổi mật khẩu / thêm tài khoản**: vào sheet `TaiKhoan`, gõ mật khẩu thường vào cột
-**`MatKhauMoi`**, rồi bấm menu **⚙️ Thi đua → 👤 Áp dụng tài khoản**. Script tự mã hoá và
-xoá ô mật khẩu thường đi. Không phải đụng vào cột `MatKhauHash`.
+Nếu dùng GitHub Pages, vào **Authentication → Settings → Authorized domains** và thêm `<tên-tài-khoản>.github.io`.
 
-Tài khoản có sẵn: `gvcn` / `gvcn@2026` · `loptruong` / `lt@2026` · `totruong1` / `tt1@2026`.
-**Đổi mật khẩu `gvcn` ngay.**
+### Bước 5 — Khởi tạo lần đầu
 
-**3c. Khóa bí mật cho token**: script tự sinh `SECRET` ngẫu nhiên khi chưa có.
-Nếu đã đặt khóa riêng trong Thuộc tính tập lệnh thì script giữ nguyên.
+Mở web → màn hình **Khởi tạo lần đầu** → nhập tên trường, lớp, năm học và tạo tài khoản GVCN.
+Web tự nạp danh mục lỗi, điểm cộng và cấu hình theo quy chế.
 
-### Bước 4 — Deploy Apps Script
+> ⚠️ **Làm ngay sau khi triển khai.** Ai mở web trước sẽ có quyền tạo tài khoản GVCN đầu tiên.
+> Sau khi khởi tạo xong, màn hình này bị khoá vĩnh viễn.
 
-`Triển khai` → `Tùy chọn triển khai mới` → chọn loại **Ứng dụng web**:
+### Bước 6 — Nhập lớp và phát tài khoản
 
-- **Thực thi với tư cách**: Tôi
-- **Ai có quyền truy cập**: **Bất kỳ ai**
+Đăng nhập GVCN → **Quản trị**:
 
-Bấm Triển khai, copy URL dạng `https://script.google.com/macros/s/AKfycb.../exec`.
+1. **Học sinh**: dán danh sách họ tên (mỗi bạn một dòng) → *Thêm vào lớp*; điền tổ, chức vụ nếu cần.
+2. **Tài khoản → Tạo tài khoản phụ huynh**: tự tạo cho cả lớp (tên đăng nhập = họ tên không dấu + `a0k67`,
+   mật khẩu ban đầu = họ tên không dấu + `1`). Bấm **In tài khoản phụ huynh** để phát cho lớp.
+3. **Thêm cán bộ lớp** (lớp trưởng, tổ trưởng). Mọi người sẽ được bắt đổi mật khẩu ở lần đăng nhập đầu.
 
-> Mỗi lần sửa code phải **Triển khai → Quản lý các bản triển khai → sửa → Phiên bản mới**,
-> nếu không URL vẫn chạy code cũ.
-
-### Bước 5 — GitHub Pages ✅ ĐÃ XONG
-
-Web đang chạy tại **https://kydung.github.io/so-thi-dua-10a0/**
-
-Repo: https://github.com/KyDung/so-thi-dua-10a0 (công khai, Pages lấy từ nhánh `main` thư mục `/docs`)
-
-Từ giờ mỗi lần `git push` là web tự cập nhật sau 1–2 phút.
-
-### Bước 6 — Nối web với backend
-
-Mở [docs/assets/js/config.js](docs/assets/js/config.js), sửa đúng 1 dòng:
-
-```javascript
-API_URL: 'https://script.google.com/macros/s/AKfycb.../exec',
-```
-
-rồi chạy:
-
-```bash
-git add docs/assets/js/config.js
-git commit -m "Nối web với Apps Script"
-git push
-```
-
-Commit và push. Sau 1–2 phút GitHub Pages cập nhật, web bắt đầu chạy với dữ liệu thật.
-
-> Trước khi dán URL, web sẽ hiện dải đỏ *"Chưa kết nối máy chủ dữ liệu"* — đúng như vậy,
-> chưa có gì sai.
-
-### Bước 7 — Gửi link cho lớp
-
-Gửi link `https://<tên-tài-khoản>.github.io/<tên-repo>/` vào nhóm lớp / nhóm phụ huynh.
-Ai mở cũng xem được, không cần tài khoản.
+Hướng dẫn đầy đủ cho cô chủ nhiệm: [tai-lieu/HUONG-DAN-CHO-CO.md](tai-lieu/HUONG-DAN-CHO-CO.md).
 
 ---
 
 ## Dùng hằng ngày
 
-> Hướng dẫn đầy đủ cho cô chủ nhiệm (quản lý tài khoản, sang năm học mới, xử lý sự cố):
-> [tai-lieu/HUONG-DAN-CHO-CO.md](tai-lieu/HUONG-DAN-CHO-CO.md)
+| Ai | Làm gì |
+|---|---|
+| **Phụ huynh** | Đăng nhập → xem điểm cộng/trừ theo tuần, xếp loại các tháng **của con mình** (không xem được bạn khác) |
+| **Tổ trưởng** | *Sổ thi đua* → chọn tuần, học sinh trong tổ → thêm lỗi / điểm cộng |
+| **Lớp trưởng** | Như tổ trưởng cho cả lớp, thêm: tạo/sửa trang tuần, chọn xếp loại tháng ở *Bảng lớp* |
+| **GVCN** | Toàn quyền, thêm *Quản trị*: chốt tháng, tài khoản, cấu hình, danh mục lỗi, xuất Excel, năm học mới |
 
-**Phụ huynh, học sinh** → mở link là xem được ngay, **không cần đăng nhập, không cần mã gì**:
-- Tab *Bảng lớp*: xếp loại cả lớp theo từng tháng, chọn tháng ở góc phải
-- Bấm vào tên bất kỳ → xem chi tiết từng lượt vi phạm / điểm cộng theo tuần, lọc theo tháng
-- Tab *Xếp hạng thi đua*: bảng điểm thi đua giữa các bạn
-
-**Tổ trưởng / lớp trưởng chép sổ** → nút *Cán bộ lớp* → đăng nhập → tab *Sổ thi đua*
-→ chọn tuần → gõ nội dung vào cột tương ứng → **Lưu thay đổi**.
-Ví dụ `10 Toán, 9 Văn` trong cột điểm cộng là 2 lượt được cộng. Mỗi mục tính một lượt;
-ngăn các mục bằng dấu phẩy hoặc chấm phẩy. Xóa nội dung ô rồi lưu để sửa phần chép sai.
-Web chỉ lưu những dòng đã thay đổi. Nếu người khác vừa sửa cùng học sinh, web báo xung đột;
-sao chép phần đang nhập rồi tải lại tuần để đối chiếu. Khi mất mạng, nội dung vẫn nằm trên
-màn hình; kiểm tra lại dữ liệu nếu chưa biết lần lưu trước đã tới máy chủ hay chưa.
-Nhật ký theo tuần không xác định ngày xảy ra từng lỗi. Muốn ghi rõ ngày, thêm ngày vào nội dung mục.
-
-**Xếp loại cuối tháng** → lớp trưởng hoặc GVCN vào tab *Bảng lớp*, chọn xếp loại cho từng
-bạn ở ô thả xuống rồi bấm **Lưu xếp loại**. Có nút *Điền theo gợi ý* để điền nhanh rồi sửa lại.
-
-**GVCN** → tab *Quản trị* để chốt tháng và tạo Google Sheet tổng hợp, sau đó tải xuống Excel.
-Đối chiếu mẫu của trường trước khi dùng để nộp.
-
----
-
-## Cách xếp loại được tính
-
-Chi tiết đầy đủ: [tai-lieu/QUY-TAC-MAC-DINH.md](tai-lieu/QUY-TAC-MAC-DINH.md)
-
-**Mặc định: web KHÔNG tự xếp loại.** Giống sổ giấy — cán bộ lớp / GVCN tự chọn
-TỐT / KHÁ / ĐẠT / CHƯA ĐẠT cho từng bạn trong tab *Bảng lớp*.
-
-Web làm phần máy làm tốt hơn người: tự cộng điểm thi đua, đếm số lần bị ghi sổ đầu bài,
-đếm số lỗi hạ bậc — hiện ngay cạnh ô chọn để người nhập có căn cứ.
-
-Ngoài ra có một **cột "Gợi ý"**: máy tính sẵn theo quy chế của trường, kèm nút
-*Điền theo gợi ý* để điền nhanh cả lớp rồi sửa lại những bạn cần. Chỉ là gợi ý, không bắt buộc.
-
-<details><summary>Công thức gợi ý (và cũng là công thức khi bật chế độ tự động)</summary>
-
-```
-Bắt đầu tháng: TỐT
-  ├─ có lỗi nghiêm trọng           → CHƯA ĐẠT
-  ├─ mỗi lỗi hạ bậc                → hạ 1 bậc
-  └─ trần theo số lần ghi sổ đầu bài: ≥3 lần → không quá KHÁ · ≥5 lần → không quá ĐẠT
-Kết quả = mức thấp hơn giữa hai nhánh
-```
-
-Cứ 3 lỗi nhỏ tính 1 lần ghi sổ đầu bài; số lỗi lẻ chuyển sang tháng sau.
-
-**Bật tự động**: đổi `TuDongXepLoai` thành `TRUE` trong sheet `CauHinh`.
-</details>
-
----
-
-## ⚠️ Những chỗ đang dùng giá trị tự đặt
-
-Hai file gốc không đủ thông tin cho mọi thứ. **14 điểm cần hỏi cô** đã được ghi lại trong
-[tai-lieu/CAU-HOI-CHO-CO.md](tai-lieu/CAU-HOI-CHO-CO.md), kèm sẵn phương án đề xuất.
-
-Ba điểm quan trọng nhất:
-1. Cơ chế cộng dồn lỗi sang tháng sau (mặc định: 3 lỗi nhỏ = 1 lần ghi sổ)
-2. Điểm thi đua có ảnh hưởng xếp loại không (mặc định: **không**)
-3. Danh sách tổ và tổ trưởng (mặc định: chia tạm 4 tổ theo A→Z — **chắc chắn sai**)
-
-Mọi giá trị này nằm trong sheet `CauHinh` và `DanhMucLoi`, **sửa trên Sheet là web đổi ngay,
-không cần sửa code**.
+Điểm được tính tự động theo `huong-dan-thi-đua-cá-nhân-2023-2024.docx`: mỗi tuần 100 điểm, trừ lỗi,
+cộng điểm tốt, xếp loại tuần theo ngưỡng; tháng = trung bình các tuần rồi áp trần ghi sổ đầu bài và
+lỗi hạ bậc. Chi tiết: [tai-lieu/QUY-TAC-MAC-DINH.md](tai-lieu/QUY-TAC-MAC-DINH.md).
+**Xếp loại do người nhập chọn luôn thắng gợi ý của máy**; ô nào chưa chọn thì lấy theo gợi ý nếu
+bật `Tự lấy xếp loại theo gợi ý` trong *Quản trị → Cấu hình*.
 
 ---
 
 ## Kiểm thử
 
-### Chạy offline (không cần mạng)
+### Logic tính điểm (không cần mạng, không cần Firebase)
 
 ```bash
-for f in tests/test-*.js; do node "$f"; done
+node tests/logic.test.mjs
 ```
 
-### Kiểm tra bản đang chạy thật — **chạy sau mỗi lần deploy**
+### Chạy thử toàn bộ web với Firebase giả (không cần dự án Firebase)
 
 ```bash
-node tests/kiem-tra-that.js
+node tests/harness/server.mjs
 ```
 
-Đăng nhập bằng cả 4 vai trò và gọi hết các lệnh, xác nhận ai được làm gì.
-Đây là bộ bắt được nhiều lỗi thực tế nhất, vì nó đi đúng đường người dùng đi.
-
-```bash
-node tests/test-xep-loai-ky.js     # 12 tình huống xếp loại học kỳ theo quy định mục II
-node tests/test-cong-don-loi.js    # cộng dồn lỗi nhỏ qua các tháng, trần ghi sổ
-node tests/test-luoi-thi-dua.js    # đối chiếu điểm các cột
-node tests/test-luu-so.js          # chạy mã backend thật với Sheet giả: lưu, xung đột, phân quyền, chốt tháng
-```
+rồi mở <http://localhost:8099/>. Bản này dùng bộ nhớ trình duyệt thay cho Firebase, để thử giao diện
+và luồng thao tác. **Không kiểm tra `firestore.rules`** — phần đó chỉ kiểm được trên Firebase thật hoặc
+Firebase Emulator (cần Java 11+): `firebase emulators:start --only firestore,auth` rồi mở web kèm `?emulator`.
 
 ---
 
-## 🔒 Quyền riêng tư (đọc trước khi push)
+## Mô hình dữ liệu
 
-**GitHub Pages miễn phí chỉ chạy trên repo công khai.** Mọi file trong repo đều đọc được
-từ Internet, kể cả khi không ai link tới.
+| Collection | Nội dung |
+|---|---|
+| `cauHinh/main` | Cấu hình lớp: ngưỡng điểm, tháng học kỳ, năm học… (đọc công khai để hiện tên lớp ở trang đăng nhập) |
+| `danhMucLoi`, `danhMucCong` | Danh mục lỗi / điểm cộng |
+| `hocSinh` | Danh sách lớp (`10A0_01`…), tổ, chức vụ |
+| `tuan` | Các trang tuần (`T2026-09-07`…) |
+| `nhatKy` | Mỗi lượt vi phạm / điểm cộng là 1 dòng; **xoá mềm** (`trangThai: DA_XOA`) |
+| `xepLoaiThang` | `{maHS}_{tháng}`: số liệu máy tính + xếp loại người nhập chọn + cờ chốt |
+| `taiKhoan/{uid}` | Hồ sơ + vai trò của người dùng Firebase Auth |
+| `dangNhap/{tên}` | Ánh xạ tên đăng nhập → email (chỉ đọc từng tên, không liệt kê được) |
+| `nhatKyHeThong` | Ai làm gì, khi nào (chỉ GVCN đọc được) |
+| `heThong/khoiTao` | Có mặt = đã khởi tạo, khoá màn hình cài đặt lần đầu |
 
-Vì vậy dự án được sắp xếp như sau:
-
-| Thứ | Ở đâu | Lên GitHub? |
-|---|---|---|
-| Mã nguồn web, danh mục lỗi, quy tắc | repo | ✅ có |
-| Dữ liệu giả phục vụ kiểm thử | `tests/` | ✅ có |
-| **Tên thật học sinh** | chỉ trong Google Sheet | ❌ không |
-| **File Excel gốc, ảnh sổ theo dõi** | `du-lieu-goc/` | ❌ không (đã có trong `.gitignore`) |
-
-> Lưu ý: bản thân **trang web thì công khai có chủ đích** — cô đã chốt là ai cũng xem được
-> để phụ huynh tiện theo dõi. Mục này nói về việc không đẩy *file nguồn* chứa dữ liệu lớp
-> lên repo, vì repo còn lộ ra cả lịch sử chỉnh sửa.
-
-Kiểm tra trước khi push lần đầu:
-
-```bash
-git status --short          # không được thấy du-lieu-goc/ hay file .xlsx
-grep -ri "tên-một-học-sinh-thật" docs/ apps-script/    # phải không ra kết quả nào
-```
-
-Nếu lỡ push tên thật lên rồi: xóa commit khỏi lịch sử (`git push --force` sau khi sửa).
-Lưu ý GitHub vẫn giữ commit cũ một thời gian, nên tốt nhất là đừng push nhầm ngay từ đầu.
-
-Muốn repo riêng tư mà vẫn có Pages thì cần GitHub Pro (có bản miễn phí cho học sinh,
-sinh viên qua GitHub Student Developer Pack).
+Điểm tuần / điểm tháng của một học sinh được **tính lại ở trình duyệt** mỗi khi có người ghi sổ rồi lưu
+vào `xepLoaiThang` để bảng lớp tải nhanh. Nghi ngờ lệch số: *Quản trị → Tính lại số liệu cả lớp*.
 
 ---
 
 ## Giới hạn cần biết
 
-- **Apps Script không phải database thật**: khoảng 30 request đồng thời, 20.000 dòng ghi/ngày,
-  mỗi lần chạy tối đa 6 phút. Với một lớp 41 học sinh thì thừa sức. Mở rộng ra cả khối/trường
-  thì phải chuyển sang Firebase hoặc Supabase.
-- **Web App deploy ở chế độ "Bất kỳ ai"** nghĩa là ai có URL đều gọi được API để *đọc*.
-  Việc *ghi* (nhập điểm, chốt tháng) vẫn phải có tài khoản.
-- **Trang web công khai hoàn toàn**: ai có link đều xem được tên và kết quả rèn luyện của cả
-  lớp. Đây là lựa chọn có chủ đích để phụ huynh tiện theo dõi. Nếu sau này cần kín hơn
-  (mỗi phụ huynh chỉ xem con mình) thì thêm lớp đăng nhập sau — cấu trúc hiện tại đã sẵn sàng.
-- **Không xóa cứng**: mọi thao tác sửa/xóa đều ghi vào sheet `Log` và bản ghi chỉ đổi trạng
-  thái, vì điểm rèn luyện ảnh hưởng học bạ nên phải truy vết được.
-- **Múi giờ** `Asia/Ho_Chi_Minh`. Sheet được set sẵn khi khởi tạo.
+- **Không có Cloud Functions** (để giữ gói miễn phí). Hệ quả:
+  - Firebase không cho đặt mật khẩu hộ người khác từ trình duyệt, nên **"Cấp lại mật khẩu"** tạo một tài khoản
+    Auth mới cùng tên đăng nhập và chuyển hồ sơ sang. Tài khoản Auth cũ thành "mồ côi" (không còn quyền gì);
+    có thể dọn bằng *Console → Authentication* khi muốn.
+  - Số liệu tổng hợp do trình duyệt của người ghi sổ tính và ghi, rules chỉ đảm bảo đúng *vai trò* chứ không
+    kiểm tra được con số. Phù hợp một lớp học; với quy mô trường nên chuyển phần tính sang Cloud Functions.
+- **Hạn mức miễn phí Firestore**: 50.000 lượt đọc / 20.000 lượt ghi mỗi ngày — thừa cho một lớp ~40 học sinh.
+- **Chống dò mật khẩu** do Firebase Authentication đảm nhiệm (giới hạn số lần thử, `too-many-requests`).
+- **Không xoá cứng**: sửa/xoá nhật ký chỉ đổi trạng thái và có ghi `nhatKyHeThong`, vì điểm rèn luyện ảnh hưởng học bạ.
+- **Múi giờ** `Asia/Ho_Chi_Minh` cho "hôm nay"; ngày lưu dạng `yyyy-MM-dd`.
+
+## Chuyển dữ liệu cũ
+
+Nếu cần đưa dữ liệu từ Google Sheet cũ sang: tải sheet `HocSinh` về lấy cột họ tên và dán vào
+*Quản trị → Học sinh*; nhật ký các tháng trước nhập lại qua *Sổ thi đua* (hoặc giữ file Excel làm tư liệu lưu).
+Mã Apps Script cũ: `git show eafa9dd:apps-script/Code.gs`.
 
 ---
+
+## 🔒 Quyền riêng tư
+
+- Trang web có thể công khai, nhưng **dữ liệu chỉ đọc được sau khi đăng nhập** và theo vai trò (xem `firestore.rules`).
+  Người chưa đăng nhập chỉ thấy tên lớp, tên trường và ánh xạ tên đăng nhập → email.
+- **Không đẩy lên repo**: danh sách học sinh thật, file Excel gốc, ảnh sổ (đã có trong `.gitignore`).
+- Bản in tài khoản phụ huynh chứa mật khẩu ban đầu: cắt rời phát riêng, không đăng nhóm chung.
 
 ## Cấu trúc thư mục
 
 ```
-docs/                     Web tĩnh (GitHub Pages trỏ vào đây)
+docs/                       Web tĩnh (GitHub Pages / Firebase Hosting trỏ vào đây)
   index.html
-  assets/css/style.css
-  assets/js/config.js     ← chỉ cần sửa file này sau khi deploy
-  assets/js/api.js        Gọi Apps Script (JSONP cho GET, text/plain cho POST)
-  assets/js/app.js        Các màn hình
-apps-script/              Dán vào Apps Script của Google Sheet
-  Setup.gs                Khởi tạo 10 sheet, danh mục lỗi, quản lý tài khoản, năm học mới
-  Helper.gs               Đọc/ghi sheet, cấu hình, log
-  XepLoai.gs              Engine tính xếp loại tháng / học kỳ / cả năm
-  Code.gs                 API, đăng nhập, phân quyền, xuất Excel
-tai-lieu/
-  HUONG-DAN-CHO-CO.md     Quản lý tài khoản, dữ liệu, năm học mới — viết cho GVCN
-  QUY-TAC-MAC-DINH.md     Toàn bộ quy tắc đang áp dụng và lý do
-  CAU-HOI-CHO-CO.md       Những thứ còn cần hỏi (không còn câu nào chặn)
-tests/                    Kiểm thử logic xếp loại bằng Node
-du-lieu-goc/              2 file gốc cô gửi
+  assets/css/style.css      Giao diện (màu, cỡ chữ khai báo ở :root)
+  assets/js/config.js       ← chỉ cần sửa file này: firebaseConfig
+  assets/js/firebase.js     Khởi tạo Firebase
+  assets/js/data.js         Đăng nhập, đọc/ghi Firestore, tính lại số liệu, xuất Excel
+  assets/js/logic.js        Phép tính điểm / xếp loại (thuần JS, có test)
+  assets/js/seed.js         Danh mục lỗi, điểm cộng, cấu hình mặc định
+  assets/js/app.js          Khung trang, định tuyến, đăng nhập, khởi tạo, đổi mật khẩu
+  assets/js/v-*.js          Các màn hình: bảng lớp, chi tiết, sổ thi đua, quản trị
+firestore.rules             Quy tắc bảo mật (BẮT BUỘC dán vào Firebase Console)
+firebase.json               Cấu hình Firebase CLI / Hosting
+tai-lieu/                   Hướng dẫn cho GVCN, quy tắc mặc định, câu hỏi còn mở
+tests/                      logic.test.mjs + harness chạy thử với Firebase giả
 ```

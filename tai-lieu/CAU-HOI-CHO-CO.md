@@ -3,8 +3,8 @@
 > Web đã chạy được và **không còn câu nào chặn**. Danh sách dưới đây là mấy thứ nhỏ,
 > hỏi được lúc nào cũng được.
 >
-> Mọi giá trị đều nằm trong sheet `CauHinh` / `DanhMucLoi` của Google Sheet —
-> **sửa trên Sheet là web đổi theo ngay, không cần sửa code**.
+> Mọi giá trị đều sửa được trên web (*Quản trị → Cấu hình / Danh mục lỗi*) —
+> **không cần sửa code**, sửa xong bấm *Tính lại* ở tab Tổng quan.
 
 ---
 
@@ -31,7 +31,7 @@ Em lập sẵn **34 mục** để cán bộ lớp chọn khi chấm:
 - 5 lỗi nề nếp hằng ngày em tự thêm: đi học muộn, không làm bài tập, trực nhật không sạch,
   mất trật tự, bị ghi sổ đầu bài
 
-Nếu lớp còn mục nào khác (nợ quỹ lớp, vắng sinh hoạt Đoàn…) thì thêm vào sheet `DanhMucLoi`.
+Nếu lớp còn mục nào khác (nợ quỹ lớp, vắng sinh hoạt Đoàn…) thì thêm trong *Quản trị → Danh mục lỗi → Thêm lỗi*.
 
 ### Điểm cộng / điểm trừ đã hợp lý chưa?
 
@@ -61,8 +61,8 @@ Cô muốn chốt vào ngày mấy hàng tháng?
 
 ## Nếu sau này cô muốn web tự tính xếp loại
 
-Phần tính tự động **đã viết sẵn và đã kiểm thử**, chỉ đang tắt. Bật bằng cách đổi
-`TuDongXepLoai` thành `TRUE` trong sheet `CauHinh`.
+Phần tính tự động **đã viết sẵn và đã kiểm thử**, chỉ đang tắt. Bật bằng cách tích
+*Tự lấy xếp loại theo gợi ý* trong *Quản trị → Cấu hình*.
 
 Ngay cả khi đang tắt, web vẫn hiện một **cột "Gợi ý"** bên cạnh ô chọn — máy tính sẵn theo
 quy chế của trường để cán bộ lớp tham khảo, kèm nút "Điền theo gợi ý" để điền nhanh cả lớp

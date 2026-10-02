@@ -1,7 +1,7 @@
 # Quy tắc mặc định đang áp dụng trong hệ thống
 
-> Đây là các quy tắc **tôi tự đặt** để web chạy được ngay. Tất cả đều nằm trong sheet
-> `CauHinh` và `DanhMucLoi` của Google Sheet — **sửa trên Sheet là web đổi theo ngay,
+> Đây là các quy tắc **tôi tự đặt** để web chạy được ngay. Tất cả đều sửa được trên web
+> (*Quản trị → Cấu hình* và *Danh mục lỗi*) — **sửa xong bấm "Tính lại" là số liệu đổi theo,
 > không cần sửa code**. Sau khi hỏi cô thì chỉnh lại các con số ở đây.
 
 ---
@@ -176,9 +176,8 @@ kỷ luật), **không có công thức**. Vì vậy hệ thống:
 Đây là lựa chọn có chủ đích của cô — mục đích là để phụ huynh tiện theo dõi, không phải
 giấu diếm. Vì vậy hệ thống bỏ hẳn cơ chế PIN cho từng học sinh.
 
-**Nếu sau này cần kín hơn** (mỗi phụ huynh chỉ xem con mình), phần cần thêm là: cột mã
-truy cập trong sheet `HocSinh`, và một lớp kiểm tra trong `apiChiTietHS`. Cấu trúc hiện tại
-đã tách sẵn "đọc công khai" và "ghi cần đăng nhập" nên nâng cấp không phải viết lại.
+**Cập nhật:** bản Firebase đã bắt buộc đăng nhập; phụ huynh chỉ đọc được dữ liệu của con mình
+(do `firestore.rules` kiểm soát), không còn "công khai hoàn toàn" như bản cũ.
 
 ---
 
@@ -190,7 +189,7 @@ truy cập trong sheet `HocSinh`, và một lớp kiểm tra trong `apiChiTietHS
   theo thứ tự danh sách. Chắc chắn sai so với thực tế → cần cô/lớp trưởng sửa lại.
   Tổ **không ảnh hưởng xếp loại hạnh kiểm**, chỉ dùng cho bảng thi đua. Để trống hết cột
   `To` thì phần xếp hạng tổ tự ẩn.
-- **Không xóa cứng**: mọi bản ghi sửa/xóa đều chuyển trạng thái và ghi vào sheet `Log`.
+- **Không xóa cứng**: mọi bản ghi sửa/xóa đều chuyển trạng thái và ghi vào `nhatKyHeThong` (Quản trị → Nhật ký).
   Điểm hạnh kiểm ảnh hưởng học bạ nên phải truy vết được.
 - **Chốt tháng**: sau khi GVCN bấm "Chốt", cán bộ lớp không sửa được tháng đó nữa.
 - **Múi giờ**: `Asia/Ho_Chi_Minh`, ngày đổi lúc 00:00.
