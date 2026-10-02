@@ -47,7 +47,7 @@ Có hai chỗ trong ảnh em chưa rõ, nhưng **không ảnh hưởng gì đế
 
 ### Ai được xếp loại?
 
-Hiện tại: **lớp trưởng và GVCN** được chọn xếp loại. Tổ trưởng chỉ ghi nhật ký vi phạm
+Hiện tại: **cán bộ lớp và GVCN** được chọn xếp loại (mọi cán bộ lớp quyền ngang nhau)
 và điểm cộng, không xếp loại được.
 
 Nếu cô muốn chỉ mình cô xếp loại thì báo, em đổi một dòng là xong.

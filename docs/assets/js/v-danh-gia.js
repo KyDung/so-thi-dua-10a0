@@ -19,7 +19,7 @@ export async function mhDanhGia() {
 
   const vt = D.vaiTro();
   const daChot = d.ds.length > 0 && d.ds.every(function (r) { return r.daChot; });
-  const duocSua = !daChot && (vt === 'LOP_TRUONG' || vt === 'GVCN');   // tổ trưởng chỉ xem
+  const duocSua = !daChot && (vt === 'CAN_BO' || vt === 'GVCN');
   const tongLoi = d.ds.reduce(function (s, r) { return s + r.loi.length; }, 0);
 
   el.innerHTML = `
@@ -39,7 +39,7 @@ export async function mhDanhGia() {
         </div>
       </div>
       <div id="demDG" class="small mute" style="margin-top:8px;min-height:18px"></div>
-      ${duocSua ? '' : (daChot ? msg('info', 'Tháng này đã chốt nên không sửa được nữa.') : msg('info', 'Chỉ lớp trưởng và giáo viên chủ nhiệm điền được kết quả đánh giá.'))}
+      ${duocSua ? '' : (daChot ? msg('info', 'Tháng này đã chốt nên không sửa được nữa.') : '')}
     </div>
 
     <div class="card flush">

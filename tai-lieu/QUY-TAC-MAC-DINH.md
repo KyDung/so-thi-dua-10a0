@@ -44,7 +44,7 @@ bậc"), không theo tổng điểm. Nếu ép quy đổi điểm → loại s�
 | Hoa điểm tốt — điểm 9 | +2 | |
 | Hoa điểm tốt — điểm 10 | +3 | |
 | Điểm tốt có dấu ★ | +3 | **Chưa rõ ★ nghĩa là gì** — xem câu hỏi Q4 |
-| Phát biểu / giúp lớp | +1 | Tổ trưởng tự chấm, tối đa 3đ/tuần/HS |
+| Phát biểu / giúp lớp | +1 | Cán bộ lớp tự chấm, tối đa 3đ/tuần/HS |
 | Điểm khởi tạo mỗi tổ / tuần | +5 | Đúng dòng "ĐIỂM CÓ SẴN: 5" trong ảnh |
 
 > **Giả định**: "Điểm có sẵn = 5" là điểm sàn mỗi tổ được cho đầu tuần. Trong ảnh: tổng HS
@@ -170,7 +170,7 @@ kỷ luật), **không có công thức**. Vì vậy hệ thống:
 | Ai | Làm được gì |
 |---|---|
 | **Bất kỳ ai có link** | Xem tất cả: bảng lớp từng tháng, chi tiết từng học sinh, xếp hạng thi đua. Không cần đăng nhập, không cần mã. |
-| **Cán bộ lớp** (tài khoản) | Thêm: nhập điểm. Tổ trưởng chỉ nhập được tổ mình, lớp trưởng cả lớp. |
+| **Cán bộ lớp** (tài khoản) | Thêm: nhập điểm cho cả lớp, chọn xếp loại tháng. Mọi cán bộ lớp quyền ngang nhau. |
 | **GVCN** (tài khoản) | Thêm: tính lại, chốt tháng, xuất Excel |
 
 Đây là lựa chọn có chủ đích của cô — mục đích là để phụ huynh tiện theo dõi, không phải

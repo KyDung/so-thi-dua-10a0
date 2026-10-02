@@ -67,7 +67,7 @@ export async function mhChamDiem() {
   if (luot !== T.luot) return;
 
   const vt = D.vaiTro();
-  const quanLyTuan = vt === 'LOP_TRUONG' || vt === 'GVCN';
+  const quanLyTuan = vt === 'CAN_BO' || vt === 'GVCN';
 
   if (!dsTuan.length) {
     el.innerHTML = `<div class="card" style="max-width:640px;margin:20px auto;text-align:center">

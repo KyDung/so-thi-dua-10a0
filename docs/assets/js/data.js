@@ -29,8 +29,7 @@ import { DS_LOI, DS_CONG, CAU_HINH_MAC_DINH } from './seed.js';
 import * as L from './logic.js';
 
 export const VAI_TRO = {
-  GVCN: 'Giáo viên chủ nhiệm', LOP_TRUONG: 'Lớp trưởng',
-  TO_TRUONG: 'Tổ trưởng', PHU_HUYNH: 'Phụ huynh'
+  GVCN: 'Giáo viên chủ nhiệm', CAN_BO: 'Cán bộ lớp', PHU_HUYNH: 'Phụ huynh'
 };
 
 // ------------------------------------------------------------ Bộ nhớ tạm trong phiên
@@ -43,7 +42,7 @@ let hoSo = null;           // hồ sơ người đang đăng nhập (taiKhoan/{u
 export const nguoiDung = function () { return hoSo; };
 export const vaiTro = function () { return hoSo ? hoSo.vaiTro : null; };
 export const laNhanVien = function () {
-  return !!hoSo && ['GVCN', 'LOP_TRUONG', 'TO_TRUONG'].indexOf(hoSo.vaiTro) >= 0;
+  return !!hoSo && ['GVCN', 'CAN_BO'].indexOf(hoSo.vaiTro) >= 0;
 };
 
 function loiDe(e) {
@@ -80,6 +79,11 @@ export async function layCauHinh(lamMoi) {
   return nho.cfg;
 }
 
+/** Chỉ còn 3 vai trò. Tài khoản cũ ghi LOP_TRUONG / TO_TRUONG được coi là cán bộ lớp. */
+function chuanVaiTro(v) {
+  return v === 'LOP_TRUONG' || v === 'TO_TRUONG' ? 'CAN_BO' : v;
+}
+
 async function napHoSo(user) {
   if (!user) { hoSo = null; return null; }
   const s = await boc(getDoc(doc(db, 'taiKhoan', user.uid)));
@@ -89,7 +93,7 @@ async function napHoSo(user) {
     hoSo = null;
     return null;
   }
-  hoSo = Object.assign({ uid: user.uid }, d);
+  hoSo = Object.assign({ uid: user.uid }, d, { vaiTro: chuanVaiTro(d.vaiTro) });
   return hoSo;
 }
 
@@ -217,19 +221,9 @@ export async function layHocSinh(lamMoi) {
   return nho.hs;
 }
 
-/** Học sinh đang học mà người dùng này được ghi (tổ trưởng chỉ thấy tổ mình). */
+/** Học sinh đang học (cán bộ lớp ghi được cho cả lớp). */
 export async function hocSinhDuocGhi() {
-  const ds = (await layHocSinh()).filter(function (r) { return r.trangThai === 'DANG_HOC'; });
-  if (hoSo.vaiTro !== 'TO_TRUONG') return ds;
-  if (!hoSo.toPhuTrach) {
-    throw new Error('Tài khoản chưa được phân tổ. Nhờ GVCN điền tổ phụ trách trong Quản trị → Tài khoản.');
-  }
-  const kq = ds.filter(function (r) { return r.to === hoSo.toPhuTrach; });
-  if (!kq.length) {
-    throw new Error('Chưa có học sinh nào thuộc "' + hoSo.toPhuTrach + '". Nhờ cô chủ nhiệm điền tổ cho học sinh ' +
-      '(Quản trị → Học sinh), hoặc xoá tổ phụ trách của tài khoản này nếu lớp không chia tổ.');
-  }
-  return kq;
+  return (await layHocSinh()).filter(function (r) { return r.trangThai === 'DANG_HOC'; });
 }
 
 export async function lopTomTat() {
@@ -348,9 +342,6 @@ function dungDM(dm) {
 export async function nhatKyHS(maHS, maTuan) {
   const hs = (await layHocSinh()).filter(function (r) { return r.maHS === maHS; })[0];
   if (!hs) throw new Error('Không tìm thấy học sinh');
-  if (hoSo.vaiTro === 'TO_TRUONG' && hoSo.toPhuTrach && hs.to !== hoSo.toPhuTrach) {
-    throw new Error('Bạn chỉ xem được học sinh trong ' + hoSo.toPhuTrach);
-  }
   const dsTuan = await layTuan();
   const tuan = dsTuan.filter(function (r) { return r.maTuan === maTuan; })[0];
   if (!tuan) throw new Error('Không tìm thấy trang tuần này');
@@ -383,9 +374,6 @@ export async function themNhatKy(muc) {
   const dsHS = await layHocSinh();
   const h = dsHS.filter(function (r) { return r.maHS === muc.maHS; })[0];
   if (!h || h.trangThai !== 'DANG_HOC') throw new Error('Không có học sinh đang học ' + muc.maHS);
-  if (hoSo.vaiTro === 'TO_TRUONG' && hoSo.toPhuTrach && h.to !== hoSo.toPhuTrach) {
-    throw new Error('Bạn chỉ được ghi cho học sinh trong ' + hoSo.toPhuTrach);
-  }
   const [dm, cfg, dsTuan] = [await layDanhMuc(), await layCauHinh(), await layTuan()];
   const bangDM = muc.loai === 'CONG' ? dm.congTheoMa : dm.loiTheoMa;
   const dong = L.dungNhatKy(muc, bangDM[muc.ma], dsTuan, cfg);
@@ -408,10 +396,6 @@ export async function xoaNhatKy(id) {
   if (!s.exists()) throw new Error('Không tìm thấy bản ghi');
   const r = s.data();
   if (r.trangThai !== 'HOAT_DONG') throw new Error('Mục này đã được xoá rồi');
-  const h = (await layHocSinh()).filter(function (x) { return x.maHS === r.maHS; })[0];
-  if (hoSo.vaiTro === 'TO_TRUONG' && (!h || h.to !== hoSo.toPhuTrach)) {
-    throw new Error('Bạn chỉ được ghi cho học sinh trong ' + hoSo.toPhuTrach);
-  }
   const t = await docThang(r.maHS, r.thang);
   if (t && t.daChot) throw new Error('Tháng ' + r.thang + ' đã chốt, không sửa được');
   if (hoSo.vaiTro !== 'GVCN') {
@@ -648,7 +632,7 @@ async function tinhLaiNhieu(dsMaHS, trongBoNho) {
       if (++soGhi >= 400) await dayLo();
     }
     // Tháng cũ không còn tuần nào (vừa dời trang tuần sang tháng khác): xoá số liệu máy tính,
-    // giữ nguyên xếp loại người nhập đã chọn. Dùng update (không delete) để tổ trưởng cũng chạy được.
+    // giữ nguyên xếp loại người nhập đã chọn. Dùng update (không delete) cho đơn giản và an toàn.
     for (const k of Object.keys(cu)) {
       const c = cu[k];
       if (tinh.thang[k] || c.daChot || (c.diemThiDua === null && !c.deXuat)) continue;
@@ -782,9 +766,9 @@ export async function capNhatHocSinh(thayDoi) {
 
 export async function dsTaiKhoan() {
   const s = await boc(getDocs(collection(db, 'taiKhoan')));
-  return s.docs.map(function (d) { return Object.assign({ uid: d.id }, d.data()); })
+  return s.docs.map(function (d) { const x = d.data(); return Object.assign({ uid: d.id }, x, { vaiTro: chuanVaiTro(x.vaiTro) }); })
     .sort(function (a, b) {
-      const thu = ['GVCN', 'LOP_TRUONG', 'TO_TRUONG', 'PHU_HUYNH'];
+      const thu = ['GVCN', 'CAN_BO', 'PHU_HUYNH'];
       return thu.indexOf(a.vaiTro) - thu.indexOf(b.vaiTro) || (a.tenDangNhap < b.tenDangNhap ? -1 : 1);
     });
 }
@@ -810,7 +794,7 @@ export async function taoTaiKhoan(t) {
   const lo = writeBatch(db);
   lo.set(doc(db, 'dangNhap', ten), { email: a.email });
   lo.set(doc(db, 'taiKhoan', a.uid), {
-    tenDangNhap: ten, hoTen: t.hoTen, vaiTro: t.vaiTro, maHS: t.maHS || '', toPhuTrach: t.toPhuTrach || '',
+    tenDangNhap: ten, hoTen: t.hoTen, vaiTro: t.vaiTro, maHS: t.maHS || '', toPhuTrach: '',
     lanDau: t.lanDau !== false, trangThai: 'HOAT_DONG', email: a.email, phienBanEmail: 0
   });
   await boc(lo.commit());

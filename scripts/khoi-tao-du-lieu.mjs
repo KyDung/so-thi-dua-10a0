@@ -46,9 +46,9 @@ async function taoAuth(a, email, mk) {
 // ---------- 1. GVCN + cán bộ lớp + khởi tạo hệ thống ----------
 const CAN_BO = [
   { tenDangNhap: 'gvcn', hoTen: 'Giáo viên chủ nhiệm', vaiTro: 'GVCN' },
-  { tenDangNhap: 'loptruong', hoTen: 'Lớp trưởng', vaiTro: 'LOP_TRUONG' },
-  { tenDangNhap: 'lopho', hoTen: 'Lớp phó', vaiTro: 'LOP_TRUONG' },
-  { tenDangNhap: 'thuky', hoTen: 'Thư ký', vaiTro: 'LOP_TRUONG' }
+  { tenDangNhap: 'loptruong', hoTen: 'Lớp trưởng', vaiTro: 'CAN_BO' },
+  { tenDangNhap: 'loppho', hoTen: 'Lớp phó', vaiTro: 'CAN_BO' },
+  { tenDangNhap: 'thuky', hoTen: 'Thư ký', vaiTro: 'CAN_BO' }
 ];
 
 const daKhoiTao = (await getDoc(doc(db, 'heThong', 'khoiTao'))).exists();

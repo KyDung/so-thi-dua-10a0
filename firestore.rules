@@ -6,8 +6,9 @@ rules_version = '2';
  * đều được kiểm tra lại ở đây.
  *
  *   GVCN        : toàn quyền
- *   LOP_TRUONG  : xem cả lớp, tạo/sửa trang tuần, ghi nhật ký, chọn xếp loại tháng
- *   TO_TRUONG   : xem cả lớp, chỉ ghi nhật ký cho học sinh thuộc tổ mình
+ *   CAN_BO      : cán bộ lớp (lớp trưởng, lớp phó, thư ký…): xem cả lớp, tạo/sửa trang tuần,
+ *                 ghi nhật ký, chọn xếp loại tháng. Giá trị cũ LOP_TRUONG / TO_TRUONG vẫn được
+ *                 chấp nhận như CAN_BO để tài khoản đã tạo trước đó không bị gãy.
  *   PHU_HUYNH   : chỉ xem dữ liệu của đúng con mình
  *   chưa đăng nhập: chỉ đọc được tên lớp (cauHinh) và ánh xạ tên đăng nhập → email
  */
@@ -21,8 +22,8 @@ service cloud.firestore {
     function active() { return signedIn() && exists(hoSoPath()) && me().trangThai == 'HOAT_DONG'; }
     function role() { return me().vaiTro; }
     function isGV() { return active() && role() == 'GVCN'; }
-    function isLeader() { return active() && role() in ['GVCN', 'LOP_TRUONG']; }
-    function isStaff() { return active() && role() in ['GVCN', 'LOP_TRUONG', 'TO_TRUONG']; }
+    function isStaff() { return active() && role() in ['GVCN', 'CAN_BO', 'LOP_TRUONG', 'TO_TRUONG']; }
+    function isLeader() { return isStaff(); }   // cán bộ lớp và GVCN có quyền ngang nhau (trừ khu Quản trị)
     function isParentOf(maHS) { return active() && role() == 'PHU_HUYNH' && me().maHS == maHS; }
 
     // Chưa khởi tạo = chưa có heThong/khoiTao. Chỉ dùng cho lần cài đặt đầu tiên.
@@ -30,8 +31,6 @@ service cloud.firestore {
       return signedIn() && !exists(/databases/$(database)/documents/heThong/khoiTao);
     }
 
-    function hocSinhDoc(maHS) { return get(/databases/$(database)/documents/hocSinh/$(maHS)).data; }
-    function trongTo(maHS) { return role() != 'TO_TRUONG' || hocSinhDoc(maHS).to == me().toPhuTrach; }
 
     function thangPath(maHS, thang) {
       return /databases/$(database)/documents/xepLoaiThang/$(maHS + '_' + string(thang));
@@ -106,15 +105,13 @@ service cloud.firestore {
         && request.resource.data.diem is number
         && request.resource.data.nguoiNhap == me().tenDangNhap
         && request.resource.data.thoiGian == request.time
-        && trongTo(request.resource.data.maHS)
         && !thangDaChot(request.resource.data.maHS, request.resource.data.thang);
 
       allow update: if isStaff() && (
-        // Xoá mềm: tổ trưởng chỉ trong tổ mình, trong N ngày; tháng chưa chốt
+        // Xoá mềm: cán bộ lớp trong N ngày, GVCN mọi lúc; tháng chưa chốt
         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['trangThai'])
           && resource.data.trangThai == 'HOAT_DONG'
           && request.resource.data.trangThai == 'DA_XOA'
-          && trongTo(resource.data.maHS)
           && !thangDaChot(resource.data.maHS, resource.data.thang)
           && (role() == 'GVCN'
               || request.time < resource.data.thoiGian
@@ -129,22 +126,18 @@ service cloud.firestore {
     }
 
     // ---------- Số liệu & xếp loại tháng ----------
-    // Tổ trưởng chỉ được cập nhật các cột máy tính; xếp loại do lớp trưởng / GVCN chọn.
+    // Cán bộ lớp và GVCN cập nhật số liệu, chọn xếp loại và ghi chú.
     match /xepLoaiThang/{id} {
       allow read: if isStaff() || isParentOf(resource.data.maHS);
 
       allow create: if isGV()
         || (isStaff()
-            && request.resource.data.daChot == false
-            && (role() != 'TO_TRUONG' || request.resource.data.xepLoai == ''));
+            && request.resource.data.daChot == false);
 
       allow update: if isGV()
         || (isStaff()
             && resource.data.daChot == false
-            && request.resource.data.daChot == false
-            && (role() != 'TO_TRUONG'
-                || !request.resource.data.diff(resource.data).affectedKeys()
-                    .hasAny(['xepLoai', 'nguoiNhap', 'ghiChu'])));
+            && request.resource.data.daChot == false);
 
       allow delete: if isGV();
     }

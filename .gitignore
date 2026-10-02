@@ -33,3 +33,6 @@ firebase-debug.log
 firestore-debug.log
 ui-debug.log
 .firebaserc
+
+# File khoá tạm của Word
+~$*

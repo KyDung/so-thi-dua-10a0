@@ -10,8 +10,7 @@ biết code và không cần mở Google Sheet.
 | Vai trò | Làm được gì |
 |---|---|
 | **GVCN** | Tất cả: ghi nhật ký, xếp loại, chốt tháng, quản trị, xuất Excel |
-| **Lớp trưởng** | Ghi nhật ký cả lớp, tạo/sửa trang tuần, chọn xếp loại tháng |
-| **Tổ trưởng** | Ghi nhật ký cho học sinh thuộc tổ mình phụ trách |
+| **Cán bộ lớp** (lớp trưởng, lớp phó, thư ký…) | Quyền ngang nhau: ghi nhật ký cả lớp, tạo/sửa trang tuần, chọn xếp loại tháng, điền đánh giá tháng. Không vào được Quản trị |
 | **Phụ huynh** | **Chỉ xem kết quả của con mình** |
 
 > **Web bắt buộc đăng nhập.** Người ngoài mở link chỉ thấy trang đăng nhập, không xem được tên
@@ -30,7 +29,7 @@ Phụ huynh nào đã đổi mật khẩu thì bảng in ghi "(phụ huynh đã 
 
 ### Thêm cán bộ lớp
 
-*Quản trị → Tài khoản → **Thêm cán bộ lớp***: tên đăng nhập, họ tên, vai trò, tổ phụ trách (nếu là tổ trưởng),
+*Quản trị → Tài khoản → **Thêm cán bộ lớp***: tên đăng nhập, họ tên, vai trò (Cán bộ lớp hoặc GVCN),
 mật khẩu ban đầu. Nhắn mật khẩu cho bạn đó; bạn sẽ phải đổi khi đăng nhập lần đầu.
 
 ### Quên mật khẩu / đặt lại (GVCN đặt được cho mọi tài khoản)
@@ -68,11 +67,11 @@ Cần nộp file Excel cho trường: *Quản trị → Chốt & xuất → **Xu
 
 | Khi nào | Ai | Làm gì |
 |---|---|---|
-| Đầu mỗi tuần | Lớp trưởng / cô | *Sổ thi đua* → **+ Trang tuần mới** → điền tuần mấy, từ ngày đến ngày |
-| Khi chép sổ | Tổ trưởng / lớp trưởng | *Sổ thi đua* → chọn tuần, học sinh → chọn lỗi / điểm cộng → **Thêm vào sổ** |
-| Cuối tháng | Lớp trưởng hoặc cô | *Bảng lớp* → chọn xếp loại từng bạn (hoặc **Điền theo gợi ý**) → **Lưu xếp loại** |
+| Đầu mỗi tuần | Cán bộ lớp / cô | *Sổ thi đua* → **+ Trang tuần mới** → điền tuần mấy, từ ngày đến ngày |
+| Khi chép sổ | Cán bộ lớp | *Sổ thi đua* → chọn tuần, học sinh → chọn lỗi / điểm cộng → **Thêm vào sổ** |
+| Cuối tháng | Cán bộ lớp hoặc cô | *Bảng lớp* → chọn xếp loại từng bạn (hoặc **Điền theo gợi ý**) → **Lưu xếp loại** |
 | Sau khi rà xong | Cô | *Quản trị → Chốt & xuất* → **Chốt tháng** (khoá lại, cán bộ lớp hết ghi/sửa được) |
-| Cuối tháng | Lớp trưởng hoặc cô | *Đánh giá* → bảng giống mẫu của trường: thấy toàn bộ lỗi trong tháng (ngày 1 → ngày cuối), tự chọn kết quả T/K/Đ/CĐ và ghi chú → **Lưu đánh giá** → **Xuất Excel tháng N** |
+| Cuối tháng | Cán bộ lớp hoặc cô | *Đánh giá* → bảng giống mẫu của trường: thấy toàn bộ lỗi trong tháng (ngày 1 → ngày cuối), tự chọn kết quả T/K/Đ/CĐ và ghi chú → **Lưu đánh giá** → **Xuất Excel tháng N** |
 | Bất kỳ lúc nào | Cô, cán bộ lớp | *Tổng quan* → xem mọi lỗi / điểm cộng **theo tuần** hoặc **theo tháng** (ngày 1 → ngày cuối tháng); *Xếp hạng* cũng chọn được theo tuần hoặc tháng |
 | Khi cần nộp | Cô | *Quản trị → Chốt & xuất* → **Xuất Excel** |
 

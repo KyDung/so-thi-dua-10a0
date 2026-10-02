@@ -178,15 +178,14 @@ async function hocSinh(goc, luot) {
 
     <div class="card flush">
       <div class="card-head"><div><h2>Danh sách lớp <span class="mute" style="font-weight:500">(${ds.length})</span></h2>
-        <p class="hint">Cột <em>Tổ</em> chỉ cần nếu lớp thi đua theo tổ — tổ trưởng chỉ ghi được cho bạn thuộc tổ mình.</p></div>
+        <p class="hint">Sửa họ tên, chức vụ hoặc đánh dấu bạn đã nghỉ / chuyển, rồi bấm Lưu thay đổi.</p></div>
         <button class="btn primary" id="btnLuuHS" disabled>${icon('tich', 'sm')} Lưu thay đổi</button></div>
       <div class="tbl-wrap" style="margin-top:12px"><table>
-        <thead><tr><th>Mã</th><th>Họ tên</th><th>Tổ</th><th>Chức vụ</th><th>Trạng thái</th></tr></thead>
+        <thead><tr><th>Mã</th><th>Họ tên</th><th>Chức vụ</th><th>Trạng thái</th></tr></thead>
         <tbody>${ds.map(function (h) {
           return `<tr data-ma="${esc(h.maHS)}">
             <td class="mute small nowrap">${esc(h.maHS)}</td>
             <td><input data-f="hoTen" value="${esc(h.hoTen)}" style="min-width:190px"></td>
-            <td><input data-f="to" value="${esc(h.to || '')}" placeholder="Tổ 1" style="width:100px"></td>
             <td><input data-f="chucVu" value="${esc(h.chucVu || '')}" placeholder="Lớp trưởng…" style="min-width:140px"></td>
             <td><select data-f="trangThai" style="min-width:130px">
               <option value="DANG_HOC"${h.trangThai === 'DANG_HOC' ? ' selected' : ''}>Đang học</option>
@@ -211,7 +210,7 @@ async function hocSinh(goc, luot) {
   };
 
   const goc0 = {}, doi = {};
-  ds.forEach(function (h) { goc0[h.maHS] = { hoTen: h.hoTen, to: h.to || '', chucVu: h.chucVu || '', trangThai: h.trangThai }; });
+  ds.forEach(function (h) { goc0[h.maHS] = { hoTen: h.hoTen, chucVu: h.chucVu || '', trangThai: h.trangThai }; });
   qa('tbody tr[data-ma] [data-f]').forEach(function (inp) {
     const sua = function () {
       const ma = inp.closest('tr').dataset.ma, f = inp.dataset.f;
@@ -235,7 +234,7 @@ async function hocSinh(goc, luot) {
 
 // ---------------------------------------------------------------- Tài khoản
 
-const TEN_VT = { GVCN: 'GVCN', LOP_TRUONG: 'Lớp trưởng', TO_TRUONG: 'Tổ trưởng', PHU_HUYNH: 'Phụ huynh' };
+const TEN_VT = { GVCN: 'GVCN', CAN_BO: 'Cán bộ lớp', PHU_HUYNH: 'Phụ huynh' };
 
 async function taiKhoan(goc, luot) {
   const [ds, hs, cfg] = [await D.dsTaiKhoan(), await D.layHocSinh(true), await D.layCauHinh()];
@@ -269,7 +268,7 @@ async function taiKhoan(goc, luot) {
           <td><strong>${esc(t.tenDangNhap)}</strong>${t.lanDau ? '<br><span class="badge DAT">chưa đổi mật khẩu</span>' : ''}</td>
           <td><span class="ten-hs">${avatar(t.hoTen, 'xs')}${esc(t.hoTen)}</span></td>
           <td><span class="badge tim">${esc(TEN_VT[t.vaiTro] || t.vaiTro)}</span></td>
-          <td>${t.vaiTro === 'PHU_HUYNH' ? esc(h ? h.hoTen : t.maHS) : esc(t.toPhuTrach || '—')}</td>
+          <td>${t.vaiTro === 'PHU_HUYNH' ? esc(h ? h.hoTen : t.maHS) : '—'}</td>
           <td>${t.trangThai === 'HOAT_DONG' ? '<span class="badge TOT">hoạt động</span>' : '<span class="badge CHUA_DAT">đã khoá</span>'}</td>
           <td class="r nowrap">
             <button class="btn sm" data-h="sua">Sửa</button>
@@ -326,8 +325,7 @@ function hopThemCanBo() {
       <div><label class="f" for="cHoTen">Họ tên</label><input id="cHoTen" required></div>
       <div class="row">
         <div class="col"><label class="f" for="cVT">Vai trò</label>
-          <select id="cVT"><option value="LOP_TRUONG">Lớp trưởng</option><option value="TO_TRUONG">Tổ trưởng</option><option value="GVCN">GVCN (toàn quyền)</option></select></div>
-        <div class="col" id="oTo"><label class="f" for="cTo">Tổ phụ trách</label><input id="cTo" placeholder="Tổ 1"></div>
+          <select id="cVT"><option value="CAN_BO">Cán bộ lớp (lớp trưởng, lớp phó, thư ký…)</option><option value="GVCN">GVCN (toàn quyền)</option></select></div>
       </div>
       <div><label class="f" for="cMk">Mật khẩu ban đầu <small>(từ 6 ký tự — người dùng sẽ phải đổi khi đăng nhập lần đầu)</small></label><input id="cMk" required minlength="6"></div>
       <div id="cLoi"></div>
@@ -335,8 +333,6 @@ function hopThemCanBo() {
     </form>`);
   const g = h.goc;
   g.querySelector('[data-huy]').onclick = h.dong;
-  const doiVT = function () { g.querySelector('#oTo').style.display = g.querySelector('#cVT').value === 'TO_TRUONG' ? '' : 'none'; };
-  g.querySelector('#cVT').onchange = doiVT; doiVT();
   g.querySelector('#fCB').onsubmit = async function (ev) {
     ev.preventDefault();
     const khoiPhuc = banNut(g.querySelector('button[type=submit]'), 'Đang tạo…');
@@ -344,8 +340,7 @@ function hopThemCanBo() {
       const vt = g.querySelector('#cVT').value;
       await D.taoTaiKhoan({
         tenDangNhap: g.querySelector('#cTen').value, hoTen: g.querySelector('#cHoTen').value.trim(),
-        matKhau: g.querySelector('#cMk').value, vaiTro: vt,
-        toPhuTrach: vt === 'TO_TRUONG' ? g.querySelector('#cTo').value.trim() : ''
+        matKhau: g.querySelector('#cMk').value, vaiTro: vt
       });
       h.dong(); toast('Đã tạo tài khoản.'); R.lamMoi();
     } catch (e) { g.querySelector('#cLoi').innerHTML = msg('err', esc(e.message)); khoiPhuc(); }
@@ -360,10 +355,9 @@ function hopSuaTK(t, hsTheoMa) {
       ${t.vaiTro === 'PHU_HUYNH' ? '<p class="hint" style="margin:0">Phụ huynh của: <strong>' + esc(hsTheoMa[t.maHS] ? hsTheoMa[t.maHS].hoTen : t.maHS) + '</strong></p>' : `
       <div class="row">
         <div class="col"><label class="f" for="sVT">Vai trò</label>
-          <select id="sVT" ${laTui ? 'disabled title="Không tự đổi vai trò của chính mình"' : ''}>${['GVCN', 'LOP_TRUONG', 'TO_TRUONG'].map(function (v) {
+          <select id="sVT" ${laTui ? 'disabled title="Không tự đổi vai trò của chính mình"' : ''}>${['GVCN', 'CAN_BO'].map(function (v) {
             return '<option value="' + v + '"' + (t.vaiTro === v ? ' selected' : '') + '>' + esc(TEN_VT[v]) + '</option>';
           }).join('')}</select></div>
-        <div class="col" id="oTo"><label class="f" for="sTo">Tổ phụ trách</label><input id="sTo" value="${esc(t.toPhuTrach || '')}" placeholder="Tổ 1"></div>
       </div>`}
       <div id="sLoi"></div>
       <div class="modal-act"><button type="button" class="btn" data-huy>Huỷ</button><button class="btn primary" type="submit">Lưu</button></div>
@@ -373,7 +367,7 @@ function hopSuaTK(t, hsTheoMa) {
   g.querySelector('#fSua').onsubmit = async function (ev) {
     ev.preventDefault();
     const f = { hoTen: g.querySelector('#sTen').value.trim() };
-    if (g.querySelector('#sVT')) { f.vaiTro = g.querySelector('#sVT').value; f.toPhuTrach = g.querySelector('#sTo').value.trim(); }
+    if (g.querySelector('#sVT')) { f.vaiTro = g.querySelector('#sVT').value; }
     try { await D.suaTaiKhoan(t.uid, f); h.dong(); toast('Đã lưu.'); R.lamMoi(); }
     catch (e) { g.querySelector('#sLoi').innerHTML = msg('err', esc(e.message)); }
   };

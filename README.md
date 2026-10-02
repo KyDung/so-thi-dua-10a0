@@ -34,7 +34,7 @@ Trình duyệt (docs/)  ──Firebase JS SDK──►  Firebase Auth   (tài kh
 **Firestore → Rules** → xoá nội dung cũ, dán toàn bộ file [firestore.rules](firestore.rules) → **Publish**.
 
 > Đây là bước quan trọng nhất: rules là "người gác cổng" thật sự của dữ liệu (phụ huynh chỉ đọc
-> được con mình, tổ trưởng chỉ ghi được tổ mình, tháng đã chốt thì khoá…). Không dán rules thì
+> được con mình, cán bộ lớp và GVCN mới ghi được, tháng đã chốt thì khoá…). Không dán rules thì
 > Firestore ở chế độ production sẽ **từ chối tất cả**, web không chạy được.
 
 ### Bước 3 — Nối web với Firebase
@@ -68,7 +68,7 @@ Web tự nạp danh mục lỗi, điểm cộng và cấu hình theo quy chế.
 1. **Học sinh**: dán danh sách họ tên (mỗi bạn một dòng) → *Thêm vào lớp*; điền tổ, chức vụ nếu cần.
 2. **Tài khoản → Tạo tài khoản phụ huynh**: tự tạo cho cả lớp (tên đăng nhập = họ tên không dấu + `a0k67`,
    mật khẩu ban đầu = họ tên không dấu + `1`). Bấm **In tài khoản phụ huynh** để phát cho lớp.
-3. **Thêm cán bộ lớp** (lớp trưởng, tổ trưởng). Mọi người sẽ được bắt đổi mật khẩu ở lần đăng nhập đầu.
+3. **Thêm cán bộ lớp** (lớp trưởng, lớp phó, thư ký… — quyền ngang nhau). Mọi người sẽ được bắt đổi mật khẩu ở lần đăng nhập đầu.
 
 Hướng dẫn đầy đủ cho cô chủ nhiệm: [tai-lieu/HUONG-DAN-CHO-CO.md](tai-lieu/HUONG-DAN-CHO-CO.md).
 
@@ -79,8 +79,7 @@ Hướng dẫn đầy đủ cho cô chủ nhiệm: [tai-lieu/HUONG-DAN-CHO-CO.md
 | Ai | Làm gì |
 |---|---|
 | **Phụ huynh** | Đăng nhập → xem điểm cộng/trừ theo tuần, xếp loại các tháng **của con mình** (không xem được bạn khác) |
-| **Tổ trưởng** | *Sổ thi đua* → chọn tuần, học sinh trong tổ → thêm lỗi / điểm cộng |
-| **Lớp trưởng** | Như tổ trưởng cho cả lớp, thêm: tạo/sửa trang tuần, chọn xếp loại tháng ở *Bảng lớp* |
+| **Cán bộ lớp** (lớp trưởng, lớp phó, thư ký…) | Quyền ngang nhau: *Sổ thi đua* → ghi lỗi / điểm cộng cho cả lớp; tạo/sửa trang tuần; chọn xếp loại tháng, điền *Đánh giá*; xem Bảng lớp, Xếp hạng, Tổng quan |
 | **GVCN** | Toàn quyền, thêm *Quản trị*: chốt tháng, tài khoản, cấu hình, danh mục lỗi, xuất Excel, năm học mới |
 
 Điểm được tính tự động theo `huong-dan-thi-đua-cá-nhân-2023-2024.docx`: mỗi tuần 100 điểm, trừ lỗi,

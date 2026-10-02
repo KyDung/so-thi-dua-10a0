@@ -35,8 +35,8 @@ export async function mhBangLop() {
   ds.forEach(function (r) { if (dem[r.xepLoai] !== undefined) dem[r.xepLoai]++; else chuaXep++; });
   const daChot = ds.length > 0 && ds.every(function (r) { return r.daChot; });
   const vt = D.vaiTro();
-  // Lớp trưởng và GVCN được xếp loại; tổ trưởng chỉ ghi nhật ký vi phạm
-  const duocSua = !daChot && (vt === 'LOP_TRUONG' || vt === 'GVCN');
+  // Cán bộ lớp và GVCN được chọn xếp loại
+  const duocSua = !daChot && (vt === 'CAN_BO' || vt === 'GVCN');
 
   el.innerHTML = `
     <div class="card">

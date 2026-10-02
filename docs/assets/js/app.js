@@ -185,7 +185,7 @@ function capNhatKhung() {
     const m = document.createElement('div');
     m.className = 'menu'; m.id = 'menuNguoi';
     m.innerHTML = '<div class="menu-head"><strong>' + esc(hoSo.hoTen) + '</strong><span>' +
-      esc(D.VAI_TRO[vt] || vt) + (hoSo.toPhuTrach ? ' · ' + esc(hoSo.toPhuTrach) : '') + ' · ' + esc(hoSo.tenDangNhap) + '</span></div>' +
+      esc(D.VAI_TRO[vt] || vt) + ' · ' + esc(hoSo.tenDangNhap) + '</span></div>' +
       (hoSo.lanDau ? '' : '<a href="#/doi-mat-khau">' + icon('chia') + 'Đổi mật khẩu</a>') +
       '<button class="nguy" id="btnThoat">' + icon('ra') + 'Đăng xuất</button>';
     khung.querySelector('.nguoi').appendChild(m);
