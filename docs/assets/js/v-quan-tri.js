@@ -254,7 +254,7 @@ async function taiKhoan(goc, luot) {
         <div class="row">
           <button class="btn" id="btnThemCB">${icon('them', 'sm')} Thêm cán bộ lớp</button>
           <button class="btn" id="btnIn">${icon('tai', 'sm')} In tài khoản phụ huynh</button>
-          <button class="btn primary" id="btnTaoPH" ${soPH >= soHS ? 'disabled' : ''}>${icon('nhom', 'sm')} Tạo tài khoản phụ huynh</button>
+          <button class="btn primary" id="btnTaoPH" ${soPH >= soHS ? 'disabled' : ''}>${icon('nhom', 'sm')} ${soPH >= soHS && soHS ? 'Đã đủ tài khoản phụ huynh' : 'Tạo tài khoản phụ huynh'}</button>
         </div>
       </div>
       <div id="tienDo" style="display:none"><div class="progress"><i></i></div><p class="hint" id="tienDoChu"></p></div>
