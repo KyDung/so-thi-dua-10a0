@@ -456,3 +456,22 @@ table.ma-tran td .small { font-size: 11px; }
   nav.tabs a { padding: 8px 10px; font-size: 13px; gap: 6px; }
   .logo-text small { display: none; }
 }
+
+/* ---- Thanh trên có 8 mục: rộng hơn, thu gọn dần theo cỡ màn hình, không bao giờ tràn ngang ---- */
+html, body { overflow-x: hidden; }
+.top-in, main { max-width: 1320px; }
+.top-in { gap: 12px; }
+.logo { flex: none; }
+nav.tabs { flex: 1 1 auto; min-width: 0; margin-left: 0; gap: 2px; overflow-x: auto; scrollbar-width: none; }
+nav.tabs::-webkit-scrollbar { display: none; }
+nav.tabs a { flex: none; padding: 9px 12px; }
+#khungNguoi { flex: none; }
+.nguoi-btn .ten { max-width: 130px; }
+@media (min-width: 861px) and (max-width: 1500px) {
+  .logo-text small { display: none; }
+  nav.tabs a { padding: 8px 10px; font-size: 13.5px; gap: 6px; }
+}
+@media (min-width: 861px) and (max-width: 1180px) {
+  .logo-text { display: none; }
+  nav.tabs a .ic { display: none; }
+}
