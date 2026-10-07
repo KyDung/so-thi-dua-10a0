@@ -475,3 +475,18 @@ nav.tabs a { flex: none; padding: 9px 12px; }
   .logo-text { display: none; }
   nav.tabs a .ic { display: none; }
 }
+
+/* ---- Laptop / cửa sổ vừa: menu xuống hàng riêng dưới logo, hiện đủ mọi mục, không phải cuộn ---- */
+@media (min-width: 861px) and (max-width: 1400px) {
+  :root { --top-h: 112px; }
+  header.top { padding-bottom: 8px; }
+  .top-in { height: auto; flex-wrap: wrap; padding-top: 10px; row-gap: 6px; }
+  .logo { order: 1; }
+  .spacer { order: 2; }
+  #khungNguoi { order: 3; margin-left: auto; }
+  nav.tabs { order: 4; flex: 1 0 100%; overflow: visible; flex-wrap: wrap; row-gap: 2px; }
+  .logo-text { display: flex; }
+  .logo-text small { display: block; }
+  nav.tabs a { padding: 8px 14px; font-size: 14px; gap: 8px; }
+  nav.tabs a .ic { display: block; }
+}
