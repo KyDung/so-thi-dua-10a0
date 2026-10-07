@@ -443,3 +443,16 @@ td .ten-hs > span:not(.avatar) { min-width: 124px; }
   nav.tabs::-webkit-scrollbar { display: none; }
   nav.tabs a { flex: 1 0 auto; min-width: 62px; padding-left: 8px; padding-right: 8px; }
 }
+
+/* Bảng học sinh x môn: cột tên dính bên trái khi cuộn ngang */
+table.ma-tran th, table.ma-tran td { white-space: nowrap; }
+table.ma-tran td:nth-child(2), table.ma-tran th:nth-child(2) { position: sticky; left: 0; background: var(--card); z-index: 1; }
+table.ma-tran th:nth-child(2) { background: var(--card-2); }
+table.ma-tran td .small { font-size: 11px; }
+
+/* Nhiều mục điều hướng trên máy tính: gọn lại cho vừa một hàng */
+@media (min-width: 861px) and (max-width: 1240px) {
+  nav.tabs { margin-left: 0; gap: 0; }
+  nav.tabs a { padding: 8px 10px; font-size: 13px; gap: 6px; }
+  .logo-text small { display: none; }
+}

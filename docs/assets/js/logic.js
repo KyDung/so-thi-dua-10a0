@@ -437,7 +437,7 @@ export function dungNhatKy(muc, dm, dsTuan, cfg) {
   return {
     maHS: muc.maHS, ngay: ngay, maTuan: tuan.maTuan, thang: thang,
     hocKy: hocKyTheoThang(thang, cfg), loai: laCong ? 'CONG' : 'LOI',
-    ma: muc.ma, mon: String(muc.mon || '').trim(), diem: diem,
+    ma: muc.ma, mon: chuanMon(muc.mon), diem: diem,
     moTa: String(muc.ghiChu || '').trim()
   };
 }
@@ -450,4 +450,55 @@ export function tenMuc(r, dm) {
 
 export function laMucTuGo(r) {
   return r.ma === 'KHAC' || r.ma === 'CONG_KHAC';
+}
+
+// ---------------------------------------------------------------- Môn học (chương trình GDPT 2018)
+
+/** Môn học và hoạt động bắt buộc, môn lựa chọn của học sinh lớp 10. */
+export const DS_MON = {
+  batBuoc: ['Ngữ văn', 'Toán', 'Tiếng Anh', 'Lịch sử', 'Giáo dục thể chất', 'Giáo dục quốc phòng và an ninh',
+    'Hoạt động trải nghiệm, hướng nghiệp', 'Nội dung giáo dục của địa phương'],
+  luaChon: ['Địa lí', 'Giáo dục kinh tế và pháp luật', 'Vật lí', 'Hóa học', 'Sinh học', 'Tin học', 'Công nghệ', 'Âm nhạc', 'Mĩ thuật']
+};
+
+const BI_DANH_MON = {
+  van: 'Ngữ văn', nguvan: 'Ngữ văn', toan: 'Toán',
+  anh: 'Tiếng Anh', tienganh: 'Tiếng Anh', su: 'Lịch sử', lichsu: 'Lịch sử',
+  theduc: 'Giáo dục thể chất', gdtc: 'Giáo dục thể chất', giaoducthechat: 'Giáo dục thể chất',
+  gdqp: 'Giáo dục quốc phòng và an ninh', gdqpan: 'Giáo dục quốc phòng và an ninh', qp: 'Giáo dục quốc phòng và an ninh',
+  quocphong: 'Giáo dục quốc phòng và an ninh', giaoducquocphongvaanninh: 'Giáo dục quốc phòng và an ninh',
+  hdtn: 'Hoạt động trải nghiệm, hướng nghiệp', hdtnhn: 'Hoạt động trải nghiệm, hướng nghiệp',
+  hoatdongtrainghiemhuongnghiep: 'Hoạt động trải nghiệm, hướng nghiệp',
+  gddp: 'Nội dung giáo dục của địa phương', noidunggiaoduccuadiaphuong: 'Nội dung giáo dục của địa phương',
+  dia: 'Địa lí', diali: 'Địa lí', dialy: 'Địa lí',
+  gdktpl: 'Giáo dục kinh tế và pháp luật', ktpl: 'Giáo dục kinh tế và pháp luật', gdcd: 'Giáo dục kinh tế và pháp luật',
+  giaodukinhtevaphapluat: 'Giáo dục kinh tế và pháp luật', giaoduckinhtevaphapluat: 'Giáo dục kinh tế và pháp luật',
+  ly: 'Vật lí', li: 'Vật lí', vatli: 'Vật lí', vatly: 'Vật lí', hoa: 'Hóa học', hoahoc: 'Hóa học', sinh: 'Sinh học', sinhhoc: 'Sinh học',
+  tin: 'Tin học', tinhoc: 'Tin học', congnghe: 'Công nghệ', amnhac: 'Âm nhạc', mythuat: 'Mĩ thuật', mithuat: 'Mĩ thuật'
+};
+
+/** Đưa tên môn viết tắt / sai chính tả về tên chuẩn ("văn" → "Ngữ văn"). Môn lạ thì giữ nguyên. */
+export function chuanMon(s) {
+  const t = String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
+  if (!t) return '';
+  return BI_DANH_MON[khongDau(t)] || t.charAt(0).toUpperCase() + t.slice(1);
+}
+
+/** Danh sách môn để hiện trong ô chọn: bắt buộc, lựa chọn, và các môn khác của trường (cấu hình MonKhac). */
+export function danhSachMon(cfg) {
+  const khac = ((cfg && cfg.MonKhac) || []).map(chuanMon).filter(Boolean);
+  const co = DS_MON.batBuoc.concat(DS_MON.luaChon).map(khongDau);
+  const rieng = khac.filter(function (m, i) {
+    const k = khongDau(m);
+    return co.indexOf(k) < 0 && khac.findIndex(function (x) { return khongDau(x) === k; }) === i;   // bỏ trùng và bỏ môn đã có sẵn
+  });
+  return { batBuoc: DS_MON.batBuoc, luaChon: DS_MON.luaChon, khac: rieng };
+}
+
+/** Thứ tự sắp xếp môn: bắt buộc → lựa chọn → môn khác (theo tên). */
+export function thuTuMon(m, cfg) {
+  const ds = danhSachMon(cfg);
+  const tat = ds.batBuoc.concat(ds.luaChon, ds.khac);
+  const i = tat.indexOf(m);
+  return i >= 0 ? i : 1000;
 }

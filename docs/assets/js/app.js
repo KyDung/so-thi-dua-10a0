@@ -13,6 +13,7 @@ import { mhBangLop, mhThiDua } from './v-lop.js';
 import { mhChiTiet } from './v-chi-tiet.js';
 import { mhTongQuan } from './v-tong-quan.js';
 import { mhDanhGia } from './v-danh-gia.js';
+import { mhDiemTot } from './v-diem-tot.js';
 import { mhChamDiem } from './v-so.js';
 import { mhQuanTri } from './v-quan-tri.js';
 
@@ -90,6 +91,7 @@ const MAN_HINH = {
   'thi-dua': mhThiDua,
   'tong-quan': mhTongQuan,
   'danh-gia': mhDanhGia,
+  'diem-tot': mhDiemTot,
   'cham-diem': mhChamDiem,
   'quan-tri': mhQuanTri,
   'doi-mat-khau': mhDoiMatKhau,
@@ -140,7 +142,7 @@ function duocVao(ten) {
   const vt = D.vaiTro();
   if (ten === 'dang-nhap' || ten === 'khoi-tao') return false;      // đã đăng nhập rồi
   if (ten === 'doi-mat-khau') return true;
-  if (vt === 'PHU_HUYNH') return ten === 'chi-tiet';
+  if (vt === 'PHU_HUYNH') return ten === 'chi-tiet' || ten === 'diem-tot';
   if (ten === 'quan-tri') return vt === 'GVCN';
   return !!MAN_HINH[ten];
 }
@@ -167,7 +169,8 @@ function capNhatKhung() {
   const muc = [];
   if (vt !== 'PHU_HUYNH') muc.push(['#/bang-lop', 'bang', 'Bảng lớp']);
   muc.push(['#/chi-tiet', 'nguoi', vt === 'PHU_HUYNH' ? 'Kết quả của con' : 'Chi tiết']);
-  if (vt !== 'PHU_HUYNH') muc.push(['#/thi-dua', 'cup', 'Xếp hạng'], ['#/tong-quan', 'nhom', 'Tổng quan'], ['#/danh-gia', 'tich', 'Đánh giá'], ['#/cham-diem', 'so', 'Sổ thi đua']);
+  if (vt === 'PHU_HUYNH') muc.push(['#/diem-tot', 'sao', 'Điểm tốt của con']);
+  if (vt !== 'PHU_HUYNH') muc.push(['#/thi-dua', 'cup', 'Xếp hạng'], ['#/tong-quan', 'nhom', 'Tổng quan'], ['#/diem-tot', 'sao', 'Điểm tốt'], ['#/danh-gia', 'tich', 'Đánh giá'], ['#/cham-diem', 'so', 'Sổ thi đua']);
   if (vt === 'GVCN') muc.push(['#/quan-tri', 'cai', 'Quản trị']);
   nav.innerHTML = hoSo.lanDau ? '' : muc.map(function (m) {
     return '<a href="' + m[0] + '">' + icon(m[1]) + '<span>' + m[2] + '</span></a>';

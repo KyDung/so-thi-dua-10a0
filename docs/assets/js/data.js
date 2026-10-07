@@ -411,6 +411,36 @@ export async function xoaNhatKy(id) {
 
 // ------------------------------------------------------------ Chi tiết một học sinh
 
+/**
+ * Điểm tốt của MỘT học sinh trong một tuần hoặc một tháng dương lịch. Phụ huynh chỉ gọi được cho con mình
+ * (truy vấn theo maHS nên khớp với quy tắc bảo mật; không đọc cả lớp).
+ * p: { kieu: 'tuan', maTuan } | { kieu: 'thang', thang }
+ */
+export async function diemTotCuaCon(p) {
+  if (hoSo.vaiTro !== 'PHU_HUYNH') throw new Error('Chức năng này dành cho phụ huynh.');
+  if (!hoSo.maHS) throw new Error('Tài khoản chưa gắn với học sinh nào. Nhờ cô chủ nhiệm kiểm tra lại.');
+  const [cfg, dm, ds] = [await layCauHinh(), await layDanhMuc(), await layHocSinh()];
+  const m = dungDM(dm);
+  let tu, den;
+  if (p.kieu === 'tuan') {
+    const t = (await layTuan()).filter(function (x) { return x.maTuan === p.maTuan; })[0];
+    if (!t) throw new Error('Không tìm thấy trang tuần này');
+    tu = t.tuNgay; den = t.denNgay;
+  } else {
+    const k = L.khoangThang(p.thang, cfg.NamHoc);
+    tu = k.tu; den = k.den;
+  }
+  const muc = (await nhatKyCuaHS(hoSo.maHS))
+    .filter(function (r) { return r.loai === 'CONG' && r.ngay >= tu && r.ngay <= den; })
+    .map(function (r) {
+      const d = m.cong[r.ma];
+      return { id: r.id, ngay: r.ngay, loai: r.loai, ma: r.ma, ten: L.tenMuc(r, d), nhomCha: d ? d.nhomCha : 'Khác',
+        mon: r.mon || '', ghiChu: L.laMucTuGo(r) ? '' : (r.moTa || ''), diem: Number(r.diem) || 0 };
+    })
+    .sort(function (a, b) { return a.ngay < b.ngay ? 1 : (a.ngay > b.ngay ? -1 : 0); });
+  return { tu: tu, den: den, hocSinh: ds[0] || null, muc: muc };
+}
+
 export async function chiTietHS(maHS) {
   if (hoSo.vaiTro === 'PHU_HUYNH') {
     if (!hoSo.maHS) throw new Error('Tài khoản chưa gắn với học sinh nào. Nhờ cô chủ nhiệm kiểm tra lại.');

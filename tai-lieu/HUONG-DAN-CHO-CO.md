@@ -72,6 +72,7 @@ Cần nộp file Excel cho trường: *Quản trị → Chốt & xuất → **Xu
 | Cuối tháng | Cán bộ lớp hoặc cô | *Bảng lớp* → chọn xếp loại từng bạn (hoặc **Điền theo gợi ý**) → **Lưu xếp loại** |
 | Sau khi rà xong | Cô | *Quản trị → Chốt & xuất* → **Chốt tháng** (khoá lại, cán bộ lớp hết ghi/sửa được) |
 | Cuối tháng | Cán bộ lớp hoặc cô | *Đánh giá* → bảng giống mẫu của trường: thấy toàn bộ lỗi trong tháng (ngày 1 → ngày cuối), tự chọn kết quả T/K/Đ/CĐ và ghi chú → **Lưu đánh giá** → **Xuất Excel tháng N** |
+| Bất kỳ lúc nào | Cô, cán bộ lớp | *Điểm tốt* → điểm 10 / 9 / 8 của cả lớp theo từng môn (phụ huynh chỉ thấy điểm tốt của con mình), theo tuần hoặc tháng (ghi điểm tốt nhớ chọn môn). Môn riêng của trường (vd Tiếng Nhật): *Quản trị → Cấu hình → Môn khác* |
 | Bất kỳ lúc nào | Cô, cán bộ lớp | *Tổng quan* → xem mọi lỗi / điểm cộng **theo tuần** hoặc **theo tháng** (ngày 1 → ngày cuối tháng); *Xếp hạng* cũng chọn được theo tuần hoặc tháng |
 | Khi cần nộp | Cô | *Quản trị → Chốt & xuất* → **Xuất Excel** |
 

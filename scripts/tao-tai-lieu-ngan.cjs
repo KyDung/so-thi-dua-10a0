@@ -50,6 +50,7 @@ const rows = [dau,
 
   nhom('Phụ huynh'),
   hang('Kết quả của con', 'Xem điểm cộng/trừ theo tuần, xếp loại các tháng, học kỳ, cả năm của con mình; lọc theo tuần / tháng / cả năm. Chỉ thấy con mình.', Y, N, N),
+  hang('Điểm tốt của con', 'Xem điểm tốt (10, 9, 8) của riêng con theo từng môn, theo tuần hoặc theo tháng; không thấy bạn khác.', Y, N, N),
   hang('Nhận xét', 'Đọc ghi chú của cô và cán bộ lớp trong bảng xếp loại tháng.', Y, N, N),
 
   nhom('Theo dõi cả lớp'),
@@ -58,8 +59,10 @@ const rows = [dau,
   hang('Xếp hạng', 'Bảng xếp hạng điểm thi đua theo tuần hoặc theo tháng, top 3 vinh danh.', N, Y, Y),
   hang('Tổng quan', 'Thống kê mọi lỗi trong tuần hoặc tháng (ngày 1 → cuối tháng): lỗi theo nhóm, lỗi phổ biến, theo học sinh, từng lượt.', N, Y, Y),
 
+  hang('Điểm tốt cả lớp', 'Tổng quan điểm 10 / 9 / 8 của toàn lớp theo từng môn, theo tuần hoặc tháng; bảng học sinh × môn.', N, Y, Y),
+
   nhom('Ghi sổ và đánh giá'),
-  hang('Sổ thi đua', 'Chép lỗi / điểm cộng hằng ngày cho từng học sinh; web tự cộng trừ điểm. Xoá mục ghi nhầm (cán bộ lớp trong 7 ngày).', N, Y, Y),
+  hang('Sổ thi đua', 'Chép lỗi / điểm cộng (kèm môn học theo chương trình hiện hành, có chọn môn khác) hằng ngày cho từng học sinh; web tự cộng trừ điểm. Xoá mục ghi nhầm (cán bộ lớp trong 7 ngày).', N, Y, Y),
   hang('Trang tuần', 'Tạo, sửa, xoá trang cho từng tuần học (tuần nghỉ thì bỏ qua).', N, Y, Y),
   hang('Chọn xếp loại tháng', 'Chọn Tốt/Khá/Đạt/Chưa đạt cho từng bạn, có nút điền theo gợi ý của máy.', N, Y, Y),
   hang('Đánh giá tháng', 'Bảng giống mẫu của trường: toàn bộ lỗi trong tháng, tự điền kết quả và ghi chú.', N, Y, Y),
@@ -71,7 +74,7 @@ const rows = [dau,
   hang('Học sinh', 'Thêm danh sách lớp, sửa họ tên / chức vụ, đánh dấu bạn nghỉ hoặc chuyển.', N, N, Y),
   hang('Tài khoản', 'Tạo tài khoản phụ huynh cả lớp, in bảng phát; thêm cán bộ lớp; sửa; khoá / mở khoá.', N, N, Y),
   hang('Đặt lại mật khẩu', 'Đặt lại mật khẩu cho mọi tài khoản khác khi quên.', N, N, Y),
-  hang('Cấu hình', 'Đổi ngưỡng điểm, trần ghi sổ, học kỳ, năm học…; số liệu tự cập nhật theo.', N, N, Y),
+  hang('Cấu hình', 'Đổi ngưỡng điểm, trần ghi sổ, học kỳ, năm học, thêm môn học riêng của trường (vd Tiếng Nhật)…; số liệu tự cập nhật theo.', N, N, Y),
   hang('Danh mục lỗi', 'Sửa tên / điểm / mức của lỗi và điểm cộng, ẩn hoặc thêm mục mới.', N, N, Y),
   hang('Nhật ký', 'Xem ai đã làm gì, lúc nào (150 thao tác gần nhất).', N, N, Y),
   hang('Năm học mới', 'Tải bản sao lưu rồi dọn dữ liệu năm cũ để bắt đầu năm mới.', N, N, Y)

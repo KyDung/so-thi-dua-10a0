@@ -8,9 +8,8 @@ import {
 } from './ui.js';
 import { T } from './ui.js';
 import * as D from './data.js';
-import { ngayNgan, goiYTuanMoi, homNay, congNgay, tuanMacDinh } from './logic.js';
+import { ngayNgan, goiYTuanMoi, homNay, congNgay, tuanMacDinh, danhSachMon, chuanMon } from './logic.js';
 
-const MON = ['Toán', 'Văn', 'Anh', 'Lí', 'Hoá', 'Sinh', 'Sử', 'Địa', 'GDCD', 'Tin', 'Công nghệ', 'Thể dục', 'GDQP'];
 
 /** Hộp thoại tạo / sửa một trang tuần. */
 function hopTuan(suaTuan, dsTuan, xong) {
@@ -82,7 +81,11 @@ export async function mhChamDiem() {
     return;
   }
 
-  const [dm, dsHS] = [await D.danhMucHienThi(), await D.hocSinhDuocGhi()];
+  const [dm, dsHS, cfg] = [await D.danhMucHienThi(), await D.hocSinhDuocGhi(), await D.layCauHinh()];
+  const dsMon = danhSachMon(cfg);
+  const nhomMon = function (nhan, ds) {
+    return ds.length ? '<optgroup label="' + nhan + '">' + ds.map(function (m) { return '<option value="' + esc(m) + '">' + esc(m) + '</option>'; }).join('') + '</optgroup>' : '';
+  };
   if (luot !== T.luot) return;
   if (!dsHS.length) { el.innerHTML = '<div class="card"><div class="empty">Không có học sinh nào bạn được ghi.</div></div>'; return; }
 
@@ -143,9 +146,11 @@ export async function mhChamDiem() {
             </div>
             <div><label class="f" for="mMa">Nội dung</label><select id="mMa"></select></div>
             <div class="row">
-              <div class="col" id="oMon"><label class="f" for="mMon">Môn <small id="monBatBuoc"></small></label>
-                <input id="mMon" list="dsMon" placeholder="Toán, Văn, Anh…" autocomplete="off">
-                <datalist id="dsMon">${MON.map(function (m) { return '<option value="' + m + '">'; }).join('')}</datalist></div>
+              <div class="col" id="oMon"><label class="f" for="mMonSel">Môn <small id="monBatBuoc"></small></label>
+                <select id="mMonSel"><option value="">— chọn môn —</option>
+                  ${nhomMon('Môn học và hoạt động bắt buộc', dsMon.batBuoc)}${nhomMon('Môn lựa chọn', dsMon.luaChon)}${nhomMon('Môn khác của trường', dsMon.khac)}
+                  <option value="__khac">Môn khác (tự nhập)…</option></select>
+                <input id="mMon" placeholder="Nhập tên môn, ví dụ Tiếng Nhật" autocomplete="off" style="display:none;margin-top:8px"></div>
               <div class="col" id="oDiem" style="display:none"><label class="f" for="mDiem">Số điểm</label>
                 <input type="number" id="mDiem" step="1" min="1" placeholder="5"></div>
             </div>
@@ -235,7 +240,7 @@ export async function mhChamDiem() {
     q('#oDiem').style.display = m.tuNhap ? '' : 'none';
     q('#mDiem').required = !!m.tuNhap;
     q('#monBatBuoc').textContent = m.canMon ? '(bắt buộc)' : '(không bắt buộc)';
-    q('#mMon').required = !!m.canMon;
+    q('#mMonSel').required = !!m.canMon;
     q('#mGhiChu').placeholder = m.tuNhap ? 'ghi rõ nội dung — bắt buộc' : 'không bắt buộc';
     const nhac = [];
     if (m.tuNhap) nhac.push('Tự ghi nội dung và số điểm.'); else nhac.push('Tự ' + (m.diem > 0 ? 'cộng ' : 'trừ ') + Math.abs(m.diem) + 'đ.');
@@ -245,6 +250,17 @@ export async function mhChamDiem() {
     if (m.nhom === 'CHUA_DAT') nhac.push('Xếp loại Chưa đạt tháng đó.');
     q('#mGoiY').textContent = nhac.join(' ');
   }
+  // Chọn "Môn khác" thì hiện ô gõ tên môn
+  q('#mMonSel').onchange = function () {
+    const khac = this.value === '__khac';
+    q('#mMon').style.display = khac ? '' : 'none';
+    q('#mMon').required = khac;
+    if (khac) q('#mMon').focus();
+  };
+  const layMon = function () {
+    const v = q('#mMonSel').value;
+    return chuanMon(v === '__khac' ? q('#mMon').value : v);
+  };
   q('#mLoai').onchange = veLaiDanhMuc;
   q('#mMa').onchange = veLaiMuc;
   veLaiDanhMuc();
@@ -257,7 +273,7 @@ export async function mhChamDiem() {
     try {
       await D.themNhatKy({
         maHS: maHS, ngay: q('#mNgay').value, loai: q('#mLoai').value, ma: q('#mMa').value,
-        mon: q('#mMon').value.trim(), ghiChu: q('#mGhiChu').value.trim(), diem: q('#mDiem').value
+        mon: layMon(), ghiChu: q('#mGhiChu').value.trim(), diem: q('#mDiem').value
       });
       toast('Đã thêm vào sổ.');
       R.lamMoi();

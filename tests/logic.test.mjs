@@ -194,5 +194,15 @@ eq('Email giả từ tên đăng nhập', L.emailTuTenDangNhap('GVCN'), 'gvcn@so
 eq('Email phiên bản 2 (sau khi cấp lại MK)', L.emailTuTenDangNhap('abc', 2), 'abc.2@so-thi-dua.local');
 chan('Tên đăng nhập có dấu cách bị từ chối', () => L.chuanTenDangNhap('an binh'), 'chữ thường');
 
+console.log('\n=== Môn học ===');
+eq('Môn viết tắt về tên chuẩn', ['văn', 'Anh', 'lí', 'Hoá', 'GDCD', 'thể dục', 'GDQP', 'địa'].map(L.chuanMon),
+  ['Ngữ văn', 'Tiếng Anh', 'Vật lí', 'Hóa học', 'Giáo dục kinh tế và pháp luật', 'Giáo dục thể chất', 'Giáo dục quốc phòng và an ninh', 'Địa lí']);
+eq('Môn đã chuẩn giữ nguyên', L.chuanMon('Mĩ thuật'), 'Mĩ thuật');
+eq('Môn mở rộng của trường giữ nguyên', L.chuanMon('  Tiếng   Nhật '), 'Tiếng Nhật');
+eq('Chuỗi rỗng', L.chuanMon(''), '');
+eq('Bắt buộc 8, lựa chọn 9', [L.DS_MON.batBuoc.length, L.DS_MON.luaChon.length], [8, 9]);
+eq('Môn khác theo cấu hình, bỏ trùng và bỏ môn đã có sẵn', L.danhSachMon({ MonKhac: ['tiếng nhật', 'Tiếng Nhật', 'Toán'] }).khac, ['Tiếng nhật']);
+eq('Thứ tự: Toán trước Vật lí trước Tiếng Nhật', [L.thuTuMon('Toán', {}) < L.thuTuMon('Vật lí', {}), L.thuTuMon('Vật lí', {}) < L.thuTuMon('Tiếng nhật', { MonKhac: ['Tiếng Nhật'] })], [true, true]);
+
 console.log('\n' + pass + ' đạt, ' + fail + ' lỗi');
 process.exit(fail ? 1 : 0);

@@ -434,7 +434,7 @@ async function cauHinh(goc, luot) {
         if (m.kieu === 'bool') {
           return `<label class="chk" style="padding:10px 0"><input type="checkbox" data-k="${m.k}" data-kieu="bool"${laDung(v) ? ' checked' : ''}> ${esc(m.nhan)}</label>`;
         }
-        const gt = m.kieu === 'dsso' ? (v || []).join(', ') : (v == null ? '' : v);
+        const gt = (m.kieu === 'dsso' || m.kieu === 'dschu') ? (v || []).join(', ') : (v == null ? '' : v);
         return `<div><label class="f" for="c_${m.k}">${esc(m.nhan)}</label>
           <input id="c_${m.k}" data-k="${m.k}" data-kieu="${m.kieu}" ${m.kieu === 'so' ? 'type="number" step="any"' : ''} value="${esc(gt)}" ${m.goiY ? 'placeholder="' + esc(m.goiY) + '"' : ''}></div>`;
       }).join('')}</div>
@@ -450,6 +450,8 @@ async function cauHinh(goc, luot) {
         else if (kieu === 'so') {
           if (i.value === '' || isNaN(Number(i.value))) throw new Error('Ô "' + (MO_TA_CAU_HINH.filter(function (m) { return m.k === k; })[0].nhan) + '" cần là số');
           moi[k] = Number(i.value);
+        } else if (kieu === 'dschu') {
+          moi[k] = i.value.split(/[,;]+/).map(function (x) { return x.trim(); }).filter(Boolean);
         } else if (kieu === 'dsso') {
           const ds = i.value.split(/[,;\s]+/).filter(Boolean).map(Number);
           if (!ds.length || ds.some(function (n) { return !(n >= 1 && n <= 12); })) throw new Error('Danh sách tháng phải là các số từ 1 đến 12');

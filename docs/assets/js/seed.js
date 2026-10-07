@@ -91,6 +91,7 @@ export const CAU_HINH_MAC_DINH = {
   SoNgayDuocSua: 7,           // Cán bộ lớp xoá được bản ghi trong N ngày
   ThangHK1: [9, 10, 11, 12, 1],
   ThangHK2: [2, 3, 4, 5],
+  MonKhac: [],                // Môn mở rộng ngoài danh sách chuẩn của trường (vd Tiếng Nhật)
   HauToTenDangNhap: 'a0k67',  // Tên đăng nhập phụ huynh = họ tên không dấu + hậu tố này
   MatKhauMacDinhHau: '1'      // Mật khẩu ban đầu của phụ huynh = họ tên không dấu + ký tự này
 };
@@ -111,6 +112,7 @@ export const MO_TA_CAU_HINH = [
   { k: 'SoNgayDuocSua', nhan: 'Số ngày cán bộ lớp được xoá mục đã ghi', kieu: 'so' },
   { k: 'ThangHK1', nhan: 'Các tháng học kỳ I (cách nhau dấu phẩy)', kieu: 'dsso' },
   { k: 'ThangHK2', nhan: 'Các tháng học kỳ II (cách nhau dấu phẩy)', kieu: 'dsso' },
+  { k: 'MonKhac', nhan: 'Môn khác của trường, ngoài các môn chuẩn (vd Tiếng Nhật; cách nhau dấu phẩy)', kieu: 'dschu' },
   { k: 'HauToTenDangNhap', nhan: 'Hậu tố tên đăng nhập phụ huynh', kieu: 'chu' },
   { k: 'MatKhauMacDinhHau', nhan: 'Ký tự cuối mật khẩu ban đầu của phụ huynh', kieu: 'chu' }
 ];
