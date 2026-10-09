@@ -490,3 +490,34 @@ nav.tabs a { flex: none; padding: 9px 12px; }
   nav.tabs a { padding: 8px 14px; font-size: 14px; gap: 8px; }
   nav.tabs a .ic { display: block; }
 }
+
+/* ---- Điện thoại: 4 mục chính + nút "Thêm" mở bảng tất cả mục ---- */
+nav.tabs .nut-them { display: none; }
+@media (max-width: 860px) {
+  nav.tabs { overflow: visible; justify-content: space-around; }
+  nav.tabs a.phu { display: none; }
+  nav.tabs a { flex: 1 1 0; min-width: 0; }
+  nav.tabs .nut-them {
+    display: flex; flex: 1 1 0; min-width: 0; flex-direction: column; align-items: center; gap: 3px; padding: 7px 4px;
+    border: 0; border-radius: 12px; background: transparent; color: var(--mute); font: inherit; font-size: 11px; font-weight: 600; cursor: pointer;
+  }
+  nav.tabs .nut-them.on { background: var(--brand-soft); color: var(--brand); }
+}
+.sheet-bg { position: fixed; inset: 0; z-index: 70; background: rgba(15, 18, 40, .5); backdrop-filter: blur(2px); display: flex; align-items: flex-end; animation: moNen .15s; }
+.sheet { width: 100%; background: var(--card); border-radius: 22px 22px 0 0; padding: 10px 16px calc(20px + env(safe-area-inset-bottom)); animation: lenSheet .22s ease-out; max-height: 80vh; overflow: auto; }
+.sheet-vach { width: 42px; height: 4px; border-radius: 4px; background: var(--line); margin: 0 auto 12px; }
+.sheet h3 { font-size: 15px; margin: 0 0 12px; color: var(--ink-2); }
+.sheet-luoi { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.sheet-luoi a {
+  display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 6px; border-radius: 14px; text-decoration: none;
+  background: var(--card-2); border: 1.5px solid var(--line-2); color: var(--ink); font-size: 13px; font-weight: 600; text-align: center;
+}
+.sheet-luoi a .ic { width: 24px; height: 24px; color: var(--brand); }
+.sheet-luoi a.on { background: var(--brand-soft); border-color: var(--brand); color: var(--brand); }
+@keyframes lenSheet { from { transform: translateY(100%); } }
+@media (min-width: 861px) { .sheet-bg { display: none; } }
+
+@media (max-width: 860px) {
+  nav.tabs a span, nav.tabs .nut-them span { white-space: normal; overflow: visible; text-overflow: clip; text-align: center; line-height: 1.15; font-size: 10.5px; }
+  nav.tabs a, nav.tabs .nut-them { justify-content: flex-start; min-height: 52px; }
+}

@@ -140,6 +140,7 @@ function dinhTuyen() {
   document.querySelectorAll('nav.tabs a').forEach(function (a) {
     a.classList.toggle('on', a.getAttribute('href').split('?')[0] === '#/' + ten);
   });
+  danhDauNutThem();
   const mh = MAN_HINH[ten] || mhBangLop;
   window.scrollTo(0, 0);
   Promise.resolve().then(mh).catch(function (e) { if (luot === T.luot) loiHien(e); });
@@ -168,6 +169,27 @@ function trangChuTheoVaiTro() {
 
 // ---------------------------------------------------------------- Khung: điều hướng + người dùng
 
+/** Nút "Thêm" sáng lên khi trang đang xem thuộc nhóm mục được cất trong đó. */
+function danhDauNutThem() {
+  const b = document.getElementById('btnThemMuc');
+  if (b) b.classList.toggle('on', !!document.querySelector('#dieuHuong a.phu.on'));
+}
+
+/** Bảng trượt từ dưới lên liệt kê tất cả các mục (điện thoại). */
+function moBangMuc(muc, hienTai) {
+  const lop = document.getElementById('lopPhu');
+  const bg = document.createElement('div');
+  bg.className = 'sheet-bg';
+  bg.innerHTML = '<div class="sheet" role="dialog" aria-label="Tất cả các mục"><div class="sheet-vach"></div>' +
+    '<h3>Tất cả các mục</h3><div class="sheet-luoi">' + muc.map(function (m) {
+      return '<a href="' + m[0] + '"' + (m[0] === hienTai ? ' class="on"' : '') + '>' + icon(m[1]) + '<span>' + m[2] + '</span></a>';
+    }).join('') + '</div></div>';
+  lop.appendChild(bg);
+  document.body.classList.add('khoa-cuon');
+  const dong = function () { bg.remove(); if (!lop.children.length) document.body.classList.remove('khoa-cuon'); };
+  bg.addEventListener('click', function (e) { if (e.target === bg || e.target.closest('a')) dong(); });
+}
+
 function capNhatKhung() {
   const hoSo = D.nguoiDung();
   const nav = document.getElementById('dieuHuong');
@@ -185,11 +207,19 @@ function capNhatKhung() {
   if (vt === 'PHU_HUYNH') muc.push(['#/diem-tot', 'sao', 'Điểm tốt của con']);
   if (vt !== 'PHU_HUYNH') muc.push(['#/thi-dua', 'cup', 'Xếp hạng'], ['#/tong-quan', 'nhom', 'Tổng quan'], ['#/diem-tot', 'sao', 'Điểm tốt'], ['#/danh-gia', 'tich', 'Đánh giá'], ['#/cham-diem', 'so', 'Sổ thi đua']);
   if (vt === 'GVCN') muc.push(['#/quan-tri', 'cai', 'Quản trị']);
+  // Điện thoại: chỉ chừa chỗ cho 4 mục hay dùng + nút "Thêm" mở bảng liệt kê TẤT CẢ các mục
+  // (để không ai tưởng menu chỉ có vài mục). Máy tính vẫn hiện đủ trên thanh trên cùng.
+  const CHINH = ['#/bang-lop', '#/cham-diem', '#/tong-quan', '#/danh-gia'];
+  const coPhu = muc.length > 5;
   nav.innerHTML = phaiDoiMK(hoSo) ? '' : muc.map(function (m) {
-    return '<a href="' + m[0] + '">' + icon(m[1]) + '<span>' + m[2] + '</span></a>';
-  }).join('');
+    return '<a href="' + m[0] + '"' + (coPhu && CHINH.indexOf(m[0]) < 0 ? ' class="phu"' : '') + '>' + icon(m[1]) + '<span>' + m[2] + '</span></a>';
+  }).join('') + (coPhu && !phaiDoiMK(hoSo) ? '<button type="button" class="nut-them" id="btnThemMuc" aria-label="Xem tất cả các mục">' +
+    icon('luoi') + '<span>Thêm</span></button>' : '');
   const hienTai = location.hash.split('?')[0] || '';
   nav.querySelectorAll('a').forEach(function (a) { a.classList.toggle('on', a.getAttribute('href') === hienTai); });
+  danhDauNutThem();
+  const btnThem = document.getElementById('btnThemMuc');
+  if (btnThem) btnThem.onclick = function () { moBangMuc(muc, hienTai || location.hash.split('?')[0]); };
 
   khung.innerHTML = '<div class="nguoi">' +
     '<button class="nguoi-btn" id="btnNguoi" aria-haspopup="true">' + avatar(hoSo.hoTen) +
