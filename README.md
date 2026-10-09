@@ -68,7 +68,7 @@ Web tự nạp danh mục lỗi, điểm cộng và cấu hình theo quy chế.
 1. **Học sinh**: dán danh sách họ tên (mỗi bạn một dòng) → *Thêm vào lớp*; điền tổ, chức vụ nếu cần.
 2. **Tài khoản → Tạo tài khoản phụ huynh**: tự tạo cho cả lớp (tên đăng nhập = họ tên không dấu + `a0k67`,
    mật khẩu ban đầu = họ tên không dấu + `1`). Bấm **In tài khoản phụ huynh** để phát cho lớp.
-3. **Thêm cán bộ lớp** (lớp trưởng, lớp phó, thư ký… — quyền ngang nhau). Mọi người sẽ được bắt đổi mật khẩu ở lần đăng nhập đầu.
+3. **Thêm cán bộ lớp** (lớp trưởng, lớp phó, thư ký… — quyền ngang nhau). Ở lần đăng nhập đầu web nhắc đổi mật khẩu nhưng có nút “Để sau” để vào xem trước.
 
 Hướng dẫn đầy đủ cho cô chủ nhiệm: [tai-lieu/HUONG-DAN-CHO-CO.md](tai-lieu/HUONG-DAN-CHO-CO.md).
 

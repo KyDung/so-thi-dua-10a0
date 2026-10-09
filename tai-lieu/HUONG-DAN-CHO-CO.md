@@ -14,7 +14,7 @@ biết code và không cần mở Google Sheet.
 | **Phụ huynh** | **Chỉ xem kết quả của con mình** |
 
 > **Web bắt buộc đăng nhập.** Người ngoài mở link chỉ thấy trang đăng nhập, không xem được tên
-> hay kết quả của học sinh nào. Ai mới được cấp tài khoản đều **bị bắt đổi mật khẩu ở lần đăng nhập đầu**.
+> hay kết quả của học sinh nào. Ai mới được cấp tài khoản đều **được nhắc đổi mật khẩu ở lần đăng nhập đầu** (có nút “Để sau” nếu chưa muốn đổi ngay; lần đăng nhập sau web nhắc lại).
 
 ### Tài khoản phụ huynh (tự tạo cho cả lớp)
 

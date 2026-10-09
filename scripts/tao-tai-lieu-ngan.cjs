@@ -46,7 +46,7 @@ const hang = (ten, td, ph, cb, gv) => new TableRow({
 const rows = [dau,
   nhom('Chung'),
   hang('Đăng nhập / đăng xuất', 'Vào web bằng tên đăng nhập và mật khẩu; đóng tab là tự thoát.', Y, Y, Y),
-  hang('Đổi mật khẩu của mình', 'Tự đặt mật khẩu riêng (bắt buộc ở lần đăng nhập đầu). Bấm tên ở góc phải trên.', Y, Y, Y),
+  hang('Đổi mật khẩu của mình', 'Tự đặt mật khẩu riêng. Lần đăng nhập đầu web nhắc đổi nhưng có thể bấm “Để sau”. Bấm tên ở góc phải trên.', Y, Y, Y),
 
   nhom('Phụ huynh'),
   hang('Kết quả của con', 'Xem điểm cộng/trừ theo tuần, xếp loại các tháng, học kỳ, cả năm của con mình; lọc theo tuần / tháng / cả năm. Chỉ thấy con mình.', Y, N, N),

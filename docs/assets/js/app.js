@@ -83,6 +83,19 @@ function baoLoiKetNoi(e) {
   box.style.display = '';
 }
 
+// ---------------------------------------------------------------- Bỏ qua đổi mật khẩu lần đầu
+
+const khoaBoQua = function () { const h = D.nguoiDung(); return 'td_boqua_mk_' + (h ? h.uid : ''); };
+/** Người dùng mới được phép bấm "Để sau" ở màn đặt mật khẩu; trong phiên đó web không ép nữa. */
+function daBoQuaDoiMK() {
+  try { return sessionStorage.getItem(khoaBoQua()) === '1'; } catch (e) { return false; }
+}
+function datBoQuaDoiMK() {
+  try { sessionStorage.setItem(khoaBoQua(), '1'); } catch (e) { /* bỏ qua */ }
+}
+/** Còn bị ép đổi mật khẩu không (chưa đổi và chưa bấm "Để sau"). */
+const phaiDoiMK = function (hoSo) { return !!hoSo.lanDau && !daBoQuaDoiMK(); };
+
 // ---------------------------------------------------------------- Định tuyến
 
 const MAN_HINH = {
@@ -119,7 +132,7 @@ function dinhTuyen() {
     // Chưa khởi tạo thì chỉ có một việc để làm: cài đặt lần đầu
     ten = daKhoiTao ? 'dang-nhap' : 'khoi-tao';
   } else {
-    if (hoSo.lanDau && ten !== 'doi-mat-khau') { location.replace('#/doi-mat-khau'); return; }
+    if (phaiDoiMK(hoSo) && ten !== 'doi-mat-khau') { location.replace('#/doi-mat-khau'); return; }
     // Vai trò nào không được vào màn nào thì đưa về trang chủ của vai trò đó
     if (!duocVao(ten)) { location.replace(trangChuTheoVaiTro()); return; }
   }
@@ -172,7 +185,7 @@ function capNhatKhung() {
   if (vt === 'PHU_HUYNH') muc.push(['#/diem-tot', 'sao', 'Điểm tốt của con']);
   if (vt !== 'PHU_HUYNH') muc.push(['#/thi-dua', 'cup', 'Xếp hạng'], ['#/tong-quan', 'nhom', 'Tổng quan'], ['#/diem-tot', 'sao', 'Điểm tốt'], ['#/danh-gia', 'tich', 'Đánh giá'], ['#/cham-diem', 'so', 'Sổ thi đua']);
   if (vt === 'GVCN') muc.push(['#/quan-tri', 'cai', 'Quản trị']);
-  nav.innerHTML = hoSo.lanDau ? '' : muc.map(function (m) {
+  nav.innerHTML = phaiDoiMK(hoSo) ? '' : muc.map(function (m) {
     return '<a href="' + m[0] + '">' + icon(m[1]) + '<span>' + m[2] + '</span></a>';
   }).join('');
   const hienTai = location.hash.split('?')[0] || '';
@@ -189,7 +202,7 @@ function capNhatKhung() {
     m.className = 'menu'; m.id = 'menuNguoi';
     m.innerHTML = '<div class="menu-head"><strong>' + esc(hoSo.hoTen) + '</strong><span>' +
       esc(D.VAI_TRO[vt] || vt) + ' · ' + esc(hoSo.tenDangNhap) + '</span></div>' +
-      (hoSo.lanDau ? '' : '<a href="#/doi-mat-khau">' + icon('chia') + 'Đổi mật khẩu</a>') +
+      '<a href="#/doi-mat-khau">' + icon('chia') + 'Đổi mật khẩu' + (hoSo.lanDau ? ' <span class="badge DAT">nên đổi</span>' : '') + '</a>' +
       '<button class="nguy" id="btnThoat">' + icon('ra') + 'Đăng xuất</button>';
     khung.querySelector('.nguoi').appendChild(m);
     m.querySelector('a') && (m.querySelector('a').onclick = function () { m.remove(); });
@@ -197,6 +210,7 @@ function capNhatKhung() {
       m.remove();
       if (!coTheRoiTrang()) return;
       T.chuaLuu = false;
+      try { sessionStorage.removeItem(khoaBoQua()); } catch (e) { /* bỏ qua */ }
       await D.dangXuat();
       location.hash = '#/dang-nhap';
     };
@@ -352,17 +366,26 @@ async function mhDoiMatKhau() {
     <div class="hero-hs" style="margin-bottom:6px">${avatar(hoSo.hoTen, 'lg')}
       <div><h2>${lanDau ? 'Đặt mật khẩu riêng' : 'Đổi mật khẩu'}</h2>
       <p class="hint" style="margin:2px 0 0">${esc(hoSo.hoTen)}</p></div></div>
-    ${lanDau ? msg('info', 'Đây là lần đăng nhập đầu tiên. Hãy đặt mật khẩu riêng để người khác không vào được tài khoản của bạn.') : ''}
+    ${lanDau ? msg('info', 'Đây là lần đăng nhập đầu tiên. Nên đặt mật khẩu riêng để người khác không vào được tài khoản của bạn — hoặc bấm “Để sau” nếu muốn xem trước, lúc nào cũng đổi được ở menu góc phải trên.') : ''}
     <form id="fMK" class="stack" style="margin-top:12px">
       <div>${oMatKhau('mkCu', 'Mật khẩu hiện tại', 'current-password')}</div>
       <div>${oMatKhau('mkMoi', 'Mật khẩu mới <small>(từ 6 ký tự)</small>', 'new-password')}</div>
       <div><label class="f" for="mkLai">Nhập lại mật khẩu mới</label>
         <input id="mkLai" type="password" minlength="6" autocomplete="new-password" required></div>
       <button class="btn primary block" type="submit">Đổi mật khẩu</button>
+      ${lanDau ? '<button class="btn block" type="button" id="btnDeSau">Để sau, vào xem trước</button>' : ''}
     </form>
     <div id="mkLoi" style="margin-top:14px"></div>
   </div>`;
   ganXemMatKhau();
+
+  const nutDeSau = q('#btnDeSau');
+  if (nutDeSau) nutDeSau.onclick = function () {
+    datBoQuaDoiMK();
+    toast('Bạn nên đổi mật khẩu sớm: bấm tên ở góc phải trên → Đổi mật khẩu.');
+    location.hash = trangChuTheoVaiTro();
+    capNhatKhung(); dinhTuyen();
+  };
 
   q('#fMK').onsubmit = async function (ev) {
     ev.preventDefault();
